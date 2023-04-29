@@ -8,7 +8,9 @@ website:
     search: true
     left:
     - text: "Hands-on Exercise"
-      file: "Hands-on_Ex/Hands-on_Ex01/Hands-on_Ex01.html"
+      file: "Hands-on_Ex/Hands-on_Ex01/Hands-on_Ex01.qmd"
+    - text: "In-class Exercise"
+      file: "In-class_Ex/In-class_Ex03/In-class_Ex03.qmd"
     - text: "Take-home Exercise"
     right: 
       - href: index.qmd
@@ -21,6 +23,11 @@ sidebar:
     background: light
     contents:
       - href: "Hands-on_Ex/Hands-on_Ex01/Hands-on_Ex01.html"
+  
+  - title: "In-Class Exercise"
+    style: "floating"
+    background: light
+    contents:
       
   - title: "Take-home Exercise"
     style: "floating"

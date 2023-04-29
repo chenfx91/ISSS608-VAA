@@ -1,0 +1,6 @@
+---
+title: "In-Class Exercise 3"
+author: "Fangxian"
+date: "29 April 2023"
+edit: visual
+---
