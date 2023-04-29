@@ -8,14 +8,25 @@ website:
     search: true
     left:
     - text: "Hands-on Exercise"
-      menu:
-        - text: "Hands-on Exercise 1"
-          href: "Hands-on_Ex/Hands-on_Ex01/Hands-on_Ex01.html"
+      file: "Hands-on_Ex/Hands-on_Ex01/Hands-on_Ex01.html"
+    - text: "Take-home Exercise"
     right: 
       - href: index.qmd
         text: Home
       - about.qmd
-
+      
+sidebar:
+  - title: "Hands-on Exercise"
+    style: "floating"
+    background: light
+    contents:
+      - href: "Hands-on_Ex/Hands-on_Ex01/Hands-on_Ex01.html"
+      
+  - title: "Take-home Exercise"
+    style: "floating"
+    background: light
+    contents:
+  
 format:
   html:
     theme: cosmo
