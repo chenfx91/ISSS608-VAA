@@ -4,6 +4,8 @@ project:
 website:
   title: "ISSS608-VAA"
   navbar:
+    background: primary
+    search: true
     left:
     - text: "Hands-on Exercise"
       menu:
