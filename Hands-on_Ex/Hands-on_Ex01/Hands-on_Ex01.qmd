@@ -1,5 +1,6 @@
 ---
 title: "Hand-on Exercise 1"
+subtitle: "Exploring ggplot2 methods"
 author: "Fangxian"
 ---
 
@@ -20,10 +21,152 @@ pacman::p_load(tidyverse)
 exam_data <- read_csv("data/Exam_data.csv")
 ```
 
-# Plotting a simple bar chart
+# Essential Grammatical Elements in ggplot2: geom
+
+## Plotting a simple bar chart
 
 ```{r}
 ggplot(data = exam_data,
        aes(x = RACE)) +
   geom_bar()
 ```
+
+### Modifying a geometric object by changing geom()
+
+```{r}
+ggplot(data=exam_data,
+       aes(x= MATHS)) +
+  geom_histogram(bins = 20,
+                 color="black",
+                 fill= "light blue")
+```
+
+### Modifying a geometric object by changing aes()
+
+```{r}
+ggplot(data=exam_data,
+       aes(x= MATHS,
+           fill = GENDER)) +
+  geom_histogram(bins=20,
+                 color="grey30")
+```
+
+## Geometric Objects: geom_density()
+
+This is a useful alternative to the histogram for continuous data that comes from an underlying smooth distribution.
+
+```{r}
+ggplot(data=exam_data, 
+       aes(x = MATHS)) +
+  geom_density()        
+```
+
+```{r}
+ggplot(data=exam_data, 
+       aes(x = MATHS, 
+           colour = GENDER)) +
+  geom_density()
+```
+
+## Geometric Objects: geom_boxplot
+
+```{r}
+ggplot(data=exam_data, 
+       aes(y = MATHS,       
+           x= GENDER)) +    
+  geom_boxplot()            
+```
+
+Adding in notches
+
+```{r}
+ggplot(data=exam_data, 
+       aes(y = MATHS, 
+           x= GENDER)) +
+  geom_boxplot(notch=TRUE)
+```
+
+## Geometric Objects: geom_violin
+
+```{r}
+ggplot(data=exam_data, 
+       aes(y = MATHS, 
+           x= GENDER)) +
+  geom_violin()
+```
+
+## Geometric Objects: geom_point()
+
+This is useful for creating scatterplot.
+
+```{r}
+ggplot(data=exam_data, 
+       aes(x= MATHS, 
+           y=ENGLISH)) +
+  geom_point()  
+```
+
+## *geom* objects can be combined
+
+```{r}
+ggplot(data=exam_data, 
+       aes(y = MATHS, 
+           x= GENDER)) +
+  geom_boxplot() +                    
+  geom_point(position="jitter", 
+             size = 0.5)
+```
+
+# Essential Grammatical Elements in ggplot2: stat
+
+## Working with stat - the stat_summary() method
+
+below code showing mean in red dots.
+
+```{r}
+ggplot(data = exam_data,
+       aes(y = MATHS, x = GENDER)) +
+  geom_boxplot() +
+  stat_summary(geom = "point",       
+               fun.y="mean",         
+               colour ="red",        
+               size=4) 
+```
+
+## Working with stat - the geom() method
+
+```{r}
+ggplot(data=exam_data, 
+       aes(y = MATHS, x= GENDER)) +
+  geom_boxplot() +
+  geom_point(stat="summary",        
+             fun.y="mean",           
+             colour ="red",          
+             size=4)  
+```
+
+## Adding a best fit curve on a scatterplot
+
+using geom_smooth(size=0.5)
+
+```{r}
+ggplot(data=exam_data, 
+       aes(x= MATHS, y=ENGLISH)) +
+  geom_point() +
+  geom_smooth(size=0.5)
+```
+
+The default smoothing method (default is loess) can be overridden as shown below.
+
+```{r}
+ggplot(data=exam_data, 
+       aes(x= MATHS, 
+           y=ENGLISH)) +
+  geom_point() +
+  geom_smooth(method=lm, 
+              size=0.5)
+```
+
+# Essential Grammatical Elements in ggplot2: Facets
+
+## Working with facet_wrap()

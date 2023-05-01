@@ -6,6 +6,8 @@ website:
   navbar:
     background: primary
     search: true
+    back-to-top-navigation: true
+    reader-mode: true
     left:
     - text: "Hands-on Exercise"
       file: "Hands-on_Ex/Hands-on_Ex01/Hands-on_Ex01.qmd"
@@ -23,11 +25,14 @@ sidebar:
     background: light
     contents:
       - href: "Hands-on_Ex/Hands-on_Ex01/Hands-on_Ex01.html"
+      - href: "Hands-on_Ex/Hands-on_Ex02/Hands-on_Ex02.html"
+      - href: "Hands-on_Ex/Hands-on_Ex03/Hands-on_Ex03.html"
   
   - title: "In-Class Exercise"
     style: "floating"
     background: light
     contents:
+      - href: "In-class_Ex/In-class_Ex03/In-class_Ex03.html"
       
   - title: "Take-home Exercise"
     style: "floating"
@@ -36,7 +41,9 @@ sidebar:
   
 format:
   html:
-    theme: cosmo
+    theme: 
+      light: flatly
+      dark: darkly
     css: styles.css
     toc: true
 
