@@ -1,4 +1,12 @@
 ---
-title: "In-class_Ex04"
+title: "In-class Exercise 4"
 author: "Fangxian"
 ---
+
+```{r}
+pacman::p_load(rstatix, gt, patchwork, tidyverse)
+```
+
+```{r}
+exam_data <- read_csv("data/Exam_data.csv")
+```
