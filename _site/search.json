@@ -1,0 +1,9 @@
+[
+  {
+    "objectID": "In-class_Ex/In-class_Ex04/In-class_Ex04.html",
+    "href": "In-class_Ex/In-class_Ex04/In-class_Ex04.html",
+    "title": "In-Class Exercise 4",
+    "section": "",
+    "text": "Getting Started\n\npacman::p_load(rstatix, gt, patchwork, tidyverse)\n\n\nexam_data <- read_csv(\"data/Exam_data.csv\")\n\n\n\nVisualising Normal Distribution\nIf the data is normally distributed, the points in a Q-Q plot will lie on a straight diagonal line. Conversely, if the points deviate significantly from the straight diagonal line, then it’s likes likely that the data is normally distributed.\n\nThe plotThe code chunk\n\n\n\n\n\n\n\n\n\n\nggplot(exam_data,\n       aes(sample=ENGLISH)) +\n  stat_qq() +\n  stat_qq_line()\n\n\n\n\n::: callout - Note Note: We can see that the points deviate significantly from the straight diagonal line. This is a clear indication that the set of data is not normally distributed. :::\n\n\nCombining satistical graph and analysis table\nNeed to install webshot\n\nThe plotThe code chunk\n\n\n\n\n\n\n\n\n\n\nqq <- ggplot(exam_data,\n       aes(sample=ENGLISH)) +\n    stat_qq() +\n    stat_qq_line()\n\nsw_t <- exam_data %>%\n  shapiro_test(ENGLISH) %>%\n  gt()\n\n#converting the image into a temp file\ntmp <- tempfile(fileext = '.png')\ngtsave(sw_t,tmp)\ntable_png <- png::readPNG(tmp, native = TRUE)\n\nqq + table_png"
+  }
+]

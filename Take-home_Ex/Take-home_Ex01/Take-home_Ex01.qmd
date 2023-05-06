@@ -1,6 +1,6 @@
 ---
 title: "Take Home Exercise 1"
-subtitle: 
+subtitle: Rent
 format: 
   html: 
     code-fold: true
