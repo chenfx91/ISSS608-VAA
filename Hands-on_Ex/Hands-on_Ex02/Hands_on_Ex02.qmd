@@ -1,0 +1,39 @@
+---
+title: "Hands-on_Ex02"
+subtitle: "Beyond ggplot2 Fundamentals"
+author: "Fangxian"
+---
+
+# Getting Started
+
+## Installing and loading the required libraries
+
+```{r}
+pacman::p_load(ggrepel, patchwork, 
+               ggthemes, hrbrthemes,
+               tidyverse) 
+```
+
+## Importing data
+
+```{r}
+exam_data <- read_csv("data/Exam_data.csv")
+```
+
+# Beyond ggpplot2 Annotation: ggrepel
+
+## Working with ggrepel
+
+```{r}
+ggplot(data=exam_data, 
+       aes(x= MATHS, 
+           y=ENGLISH)) +
+  geom_point() +
+  geom_smooth(method=lm, 
+              size=0.5) +  
+  geom_label_repel(aes(label = ID), 
+                   fontface = "bold") +
+  coord_cartesian(xlim=c(0,100),
+                  ylim=c(0,100)) +
+  ggtitle("English scores versus Maths scores for Primary 3")
+```

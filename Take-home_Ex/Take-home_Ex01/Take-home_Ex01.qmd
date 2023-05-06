@@ -1,0 +1,18 @@
+---
+title: "Take-home_Ex01"
+author: "Fangxian"
+---
+
+Getting Started
+
+```{r}
+pacman::p_load(tidyverse, ggiraph, plotly, patchwork, DT, gifski, gapminder,gganimate, ggrepel, patchwork, ggthemes, hrbrthemes,FunnelPlotR, knitr, ggstatsplot, crosstalk, ggdist)
+```
+
+Importing Data
+
+```{r}
+Participants <- read_csv("data/participants.csv") %>%
+    mutate_if(is.character, as.factor)
+FinancialJournal <- read_csv("data/FinancialJournal.csv")
+```
