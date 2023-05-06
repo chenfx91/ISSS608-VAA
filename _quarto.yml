@@ -4,6 +4,7 @@ project:
 website:
   title: "ISSS608-VAA"
   sidebar:
+    style: "docked"
     search: true
     back-to-top-navigation: true
     reader-mode: true

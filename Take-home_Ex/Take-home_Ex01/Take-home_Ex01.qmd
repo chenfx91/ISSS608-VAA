@@ -1,15 +1,25 @@
 ---
-title: "Take-home_Ex01"
+title: "Take Home Exercise 1"
+subtitle: 
+format: 
+  html: 
+    code-fold: true
+    code-summary: "Show the code"
 author: "Fangxian"
+execute: 
+  eval: true
+  warning: false
 ---
 
-Getting Started
+# Task
+
+# Getting Started
 
 ```{r}
 pacman::p_load(tidyverse, ggiraph, plotly, patchwork, DT, gifski, gapminder,gganimate, ggrepel, patchwork, ggthemes, hrbrthemes,FunnelPlotR, knitr, ggstatsplot, crosstalk, ggdist)
 ```
 
-Importing Data
+# Importing Data
 
 ```{r}
 Participants <- read_csv("data/participants.csv") %>%

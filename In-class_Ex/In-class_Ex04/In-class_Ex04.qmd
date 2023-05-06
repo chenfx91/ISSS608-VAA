@@ -1,12 +1,81 @@
 ---
-title: "In-class Exercise 4"
+title: "In-Class Exercise 4"
+execute: 
+  eval: true
+  echo: true
+  warning: false
 author: "Fangxian"
+date: "6 May 2023"
+date-modified: "`r Sys.Date()`"
 ---
+
+
+### Getting Started
 
 ```{r}
 pacman::p_load(rstatix, gt, patchwork, tidyverse)
 ```
 
 ```{r}
+#| echo: true
 exam_data <- read_csv("data/Exam_data.csv")
 ```
+
+### Visualising Normal Distribution
+
+If the data is normally distributed, the points in a Q-Q plot will lie on a straight diagonal line. Conversely, if the points deviate significantly from the straight diagonal line, then it's likes likely that the data is normally distributed.
+
+::: panel-tabset
+
+## The plot
+```{r}
+#| echo: false
+#| fig-width: 4
+#| fig-height: 4
+ggplot(exam_data,
+       aes(sample=ENGLISH)) +
+  stat_qq() +
+  stat_qq_line()
+```
+
+## The code chunk
+```{r}
+#| eval: false
+#| fig-width: 4
+#| fig-height: 4
+ggplot(exam_data,
+       aes(sample=ENGLISH)) +
+  stat_qq() +
+  stat_qq_line()
+```
+:::
+
+::: callout - Note
+Note: We can see that the points deviate significantly from the straight diagonal line. This is a clear indication that the set of data is not normally distributed.
+:::
+
+### Combining satistical graph and analysis table
+Need to install webshot
+
+::: panel-tabset
+
+## The plot
+```{r}
+#| echo: false
+qq <- ggplot(exam_data,
+       aes(sample=ENGLISH)) +
+    stat_qq() +
+    stat_qq_line()
+
+sw_t <- exam_data %>%
+  shapiro_test(ENGLISH) %>%
+  gt()
+
+#converting the image into a temp file
+tmp <- tempfile(fileext = '.png')
+gtsave(sw_t,tmp)
+table_png <- png::readPNG(tmp, native = TRUE)
+
+qq + table_png
+```
+
