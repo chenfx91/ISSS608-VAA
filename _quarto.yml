@@ -10,7 +10,7 @@ website:
     reader-mode: true
     contents: 
       - section: "Take-home Exercise"
-        contents:
+        contents: 
           - Take-home_Ex/Take-home_Ex01/Take-home_Ex01.qmd
       - section: "In-Class Exercise"
         contents: 

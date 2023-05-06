@@ -100,3 +100,4 @@ table_png <- png::readPNG(tmp, native = TRUE)
 qq + table_png
 ```
 :::
+
