@@ -1,0 +1,32 @@
+---
+title: "In-Class Exercise 5"
+execute: 
+  eval: true
+  echo: true
+  warning: false
+author: "Fangxian"
+date: "13 May 2023"
+date-modified: "`r Sys.Date()`"
+---
+
+# Getting Started
+
+```{r}
+pacman::p_load(jsonlite, tidygraph, ggraph, visNetwork, tidyverse)
+```
+
+Below codes are for the project
+
+```{r}
+MC1 <- jsonlite::fromJSON("data/MC1.json")
+```
+
+```{r}
+MC1_nodes <- as_tibble(MC1$nodes) %>%
+  select(id,type,country)
+```
+
+```{r}
+MC1_edges <- as_tibble(MC1$links) %>%
+  select(source, target, type, weight, key)
+```

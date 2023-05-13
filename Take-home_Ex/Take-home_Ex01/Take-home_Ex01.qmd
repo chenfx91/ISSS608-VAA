@@ -92,6 +92,14 @@ Merged_table$Shelter <- NULL
 Merged_table$Count <- NULL
 ```
 
+Check for any missing values.
+
+```{r}
+any(is.na(Merged_table))
+```
+
+Summary of the
+
 ```{r}
 psych::describe(Merged_table)
 ```
