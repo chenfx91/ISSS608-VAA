@@ -15,14 +15,14 @@ execute:
 
 City of Engagement, with a total population of 50,000, is a small city located at Country of Nowhere. The city serves as a service centre of an agriculture region surrounding the city. The main agriculture of the region is fruit farms and vineyards. The local council of the city is in the process of preparing the Local Plan 2023. A sample survey of 1000 representative residents had been conducted to collect data related to their household demographic and spending patterns, among other things. The city aims to use the data to assist with their major community revitalization efforts, including how to allocate a very large city renewal grant they have recently received.
 
-The following analysis on the sample survey to reveal the demographic and financial characteristics of the city of Engagement byusing appropriate **static and interactive statistical graphics** methods. This analysis will be showing user-friendly and interactive solution that helps city managers and planners to explore the complex data in an engaging way and reveal hidden patterns.
+The following analysis on the sample survey to reveal the demographic and financial characteristics of the city of Engagement by using appropriate **static and interactive statistical graphics** methods. This analysis will be showing user-friendly and interactive solution that helps city managers and planners to explore the complex data in an engaging way and reveal hidden patterns.
 
 # Data Preparation
 
 ## Load Packages
 
 ```{r}
-pacman::p_load(ggstatsplot, ggthemes, plotly, corrplot, lubridate, ggpubr, plotly, treemap, d3treeR, hrbrthemes, ggrepel, RColorBrewer, gganimate, viridis, ggridges, ggrepel, testthat, hmisc, tidyverse)
+pacman::p_load(tidyverse, ggplot2,plotly, ggdist, ggridges, ggthemes, colorspace, ggstatsplot, patchwork, ggrepel)
 ```
 
 ## Data importing and wraggling
@@ -33,7 +33,17 @@ Import and check the columns in the participant dataset.
 Participants <- read_csv("data/participants.csv") %>%
   mutate_if(is.character, as.factor)
 
-head(Participants)
+glimpse(Participants)
+```
+
+```{r}
+Participants$age_group <- cut(Participants$age,
+                              breaks = c(-Inf,21, 26, 31, 36, 41, 46, 51, 56, Inf),
+                              labels = c("<20", "21-25", "26-30","31-35", "36-40", 
+                                             "41-45", "46-50","51-55", "56-60"),
+                              right = FALSE)
+
+Participants$age <- NULL
 ```
 
 Import and read the FinancialJournal Dataset, extract out Category to match the participants to be columns.
@@ -70,13 +80,19 @@ Fin_summ <- Fin_split_ym %>%
     Shelter = sum(Shelter, na.rm = TRUE),
     Wage = sum(Wage, na.rm = TRUE),
     RentAdjustment = sum(RentAdjustment, na.rm = TRUE),
-    Count = n()
   ) %>% 
   ungroup()%>%
   mutate(
     AdjustedShelter = Shelter + RentAdjustment,
     TotalExpense = Food + Recreation + AdjustedShelter + Education,
     TotalSavings = Wage + TotalExpense)
+
+Fin_summ$Education <- abs(Fin_summ$Education)
+Fin_summ$Food <- abs(Fin_summ$Food)
+Fin_summ$Recreation <- abs(Fin_summ$Recreation)
+Fin_summ$AdjustedShelter <- abs(Fin_summ$AdjustedShelter)
+Fin_summ$TotalExpense <- abs(Fin_summ$TotalExpense)
+
 
 ```
 
@@ -89,7 +105,6 @@ Merged_table <- Fin_summ %>%
 
 Merged_table$RentAdjustment <- NULL
 Merged_table$Shelter <- NULL
-Merged_table$Count <- NULL
 ```
 
 Check for any missing values.
@@ -98,8 +113,91 @@ Check for any missing values.
 any(is.na(Merged_table))
 ```
 
-Summary of the
+Summary of the statistics of the merged_table
 
 ```{r}
 psych::describe(Merged_table)
+```
+
+```{r}
+Fin_byparticipant <- Fin_summ %>%
+  group_by(participantId) %>%
+  summarize(
+    Education = sum(Education, na.rm = TRUE),
+    Food = sum(Food, na.rm = TRUE),
+    Recreation = sum(Recreation, na.rm = TRUE),
+    Wage = sum(Wage, na.rm = TRUE),
+    AdjustedShelter = sum(AdjustedShelter, na.rm = TRUE),
+    TotalExpense = sum (TotalExpense, na.rm = TRUE),
+    TotalSavings = sum(TotalSavings, na.rm = TRUE)
+  ) 
+
+Merged_table2 <- Fin_byparticipant %>%
+  inner_join(Participants, by = "participantId")
+
+```
+
+# Visualisation
+
+```{r}
+ggplot(data=Merged_table2, 
+       aes(y = joviality,       
+           x= haveKids)) +    
+  geom_boxplot()+
+    geom_point(position="jitter", 
+             size = 0.5)  +
+    stat_summary(geom = "point",       
+               fun.y="mean",         
+               colour ="red",        
+               size=4) +
+  stat_summary(aes(label = round(after_stat(y), 2)), fun=mean, geom = "label_repel", size=3, angle=150)
+```
+
+```{r}
+ggplot(Merged_table2, 
+       aes(x = joviality, 
+           y = educationLevel,
+           fill = stat(x))) +
+  geom_density_ridges_gradient(
+    scale = 2,
+    rel_min_height = 0.01,
+    fill = lighten("#7097BB", .3),
+    color = "white") +
+  scale_x_continuous(
+    name = "Joviality Scores",
+    expand = c(0, 0)
+  ) +
+  scale_y_discrete(name = NULL, expand = expansion(add = c(0.2, 2.6))) +
+  theme_ridges() +
+  facet_wrap(~ haveKids, nrow = 1)
+```
+
+```{r}
+ggplot(data=Merged_table2, 
+       aes(y = joviality, x= age_group)) +
+  geom_boxplot() +
+  stat_summary(geom = "point",
+               fun="mean",
+               colour ="red",
+               size=2) +
+  stat_summary(aes(label = round(after_stat(y), 2)), fun=mean, geom = "label_repel", size=3, angle=150) +
+  facet_grid(haveKids ~.) +
+  labs(y= 'Joviality', x= 'Age Group',
+       title = "Distribution of Joviality across Age Groups by Kids Status") +
+  theme(axis.title.y= element_text(angle=0), axis.ticks.x= element_blank(),
+        axis.line= element_line(color= 'grey'))
+```
+
+From the figure below, we can see that, joviality is directly correlated to TotalExpense and Recreation while negatively correlated with TotalSavings and Wage.
+
+```{r}
+ggstatsplot::ggcorrmat(
+  data = Merged_table2,
+  cor.vars = c(2:8,13),
+    ggcorrplot.args = list(outline.color = "black", 
+                         hc.order = TRUE,
+                         tl.cex = 10),
+  title    = "Correlogram for Merged_table2 dataset",
+  subtitle = "Four pairs are no significant at p < 0.05"
+    )
 ```
