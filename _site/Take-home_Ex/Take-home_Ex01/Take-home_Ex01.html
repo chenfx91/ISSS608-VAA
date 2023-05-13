@@ -231,8 +231,11 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
    
   <ul>
   <li><a href="#task" id="toc-task" class="nav-link active" data-scroll-target="#task">Task</a></li>
-  <li><a href="#getting-started" id="toc-getting-started" class="nav-link" data-scroll-target="#getting-started">Getting Started</a></li>
-  <li><a href="#data-preparation" id="toc-data-preparation" class="nav-link" data-scroll-target="#data-preparation">Data Preparation</a></li>
+  <li><a href="#data-preparation" id="toc-data-preparation" class="nav-link" data-scroll-target="#data-preparation">Data Preparation</a>
+  <ul class="collapse">
+  <li><a href="#load-packages" id="toc-load-packages" class="nav-link" data-scroll-target="#load-packages">Load Packages</a></li>
+  <li><a href="#data-importing-and-wraggling" id="toc-data-importing-and-wraggling" class="nav-link" data-scroll-target="#data-importing-and-wraggling">Data importing and wraggling</a></li>
+  </ul></li>
   </ul>
 </nav>
     </div>
@@ -242,7 +245,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
 <h1 class="title d-none d-lg-block">Take Home Exercise 1</h1>
-<p class="subtitle lead">Rent</p>
+<p class="subtitle lead">Visual Anlytics of Demographics and Financial Characteristics of the Residents in the City of Engagement to Aid Revitalization Grant Allocation</p>
 </div>
 
 
@@ -265,18 +268,23 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 
 <section id="task" class="level1">
 <h1>Task</h1>
-</section>
-<section id="getting-started" class="level1">
-<h1>Getting Started</h1>
-<div class="cell">
-<details>
-<summary>Show the code</summary>
-<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(tidyverse, ggiraph, plotly, patchwork, DT, gifski, gapminder,gganimate, ggrepel, patchwork, ggthemes, hrbrthemes,FunnelPlotR, knitr, ggstatsplot, crosstalk, ggdist, lubridate, dyplyr)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</details>
-</div>
+<p>City of Engagement, with a total population of 50,000, is a small city located at Country of Nowhere. The city serves as a service centre of an agriculture region surrounding the city. The main agriculture of the region is fruit farms and vineyards. The local council of the city is in the process of preparing the Local Plan 2023. A sample survey of 1000 representative residents had been conducted to collect data related to their household demographic and spending patterns, among other things. The city aims to use the data to assist with their major community revitalization efforts, including how to allocate a very large city renewal grant they have recently received.</p>
+<p>The following analysis on the sample survey to reveal the demographic and financial characteristics of the city of Engagement byusing appropriate <strong>static and interactive statistical graphics</strong> methods. This analysis will be showing user-friendly and interactive solution that helps city managers and planners to explore the complex data in an engaging way and reveal hidden patterns.</p>
 </section>
 <section id="data-preparation" class="level1">
 <h1>Data Preparation</h1>
+<section id="load-packages" class="level2">
+<h2 class="anchored" data-anchor-id="load-packages">Load Packages</h2>
+<div class="cell">
+<details>
+<summary>Show the code</summary>
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(ggstatsplot, ggthemes, plotly, corrplot, lubridate, ggpubr, plotly, treemap, d3treeR, hrbrthemes, ggrepel, RColorBrewer, gganimate, viridis, ggridges, ggrepel, testthat, hmisc, tidyverse)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+</section>
+<section id="data-importing-and-wraggling" class="level2">
+<h2 class="anchored" data-anchor-id="data-importing-and-wraggling">Data importing and wraggling</h2>
+<p>Import and check the columns in the participant dataset.</p>
 <div class="cell">
 <details>
 <summary>Show the code</summary>
@@ -298,6 +306,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 # ℹ 1 more variable: joviality &lt;dbl&gt;</code></pre>
 </div>
 </div>
+<p>Import and read the FinancialJournal Dataset, extract out Category to match the participants to be columns.</p>
 <div class="cell">
 <details>
 <summary>Show the code</summary>
@@ -308,106 +317,97 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">date =</span> <span class="fu">as.Date</span>(timestamp)) <span class="sc">%&gt;%</span></span>
 <span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(participantId, category, timestamp) <span class="sc">%&gt;%</span></span>
 <span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarize</span>(<span class="at">amount =</span> <span class="fu">sum</span>(amount)) <span class="sc">%&gt;%</span></span>
-<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_wider</span>(<span class="at">names_from =</span> category, <span class="at">values_from =</span> amount)</span>
-<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(Fin_by_cat)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_wider</span>(<span class="at">names_from =</span> category, <span class="at">values_from =</span> amount)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<p>Extract the month_year out of timestamp.</p>
+<div class="cell">
+<details>
+<summary>Show the code</summary>
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>Fin_split_ym <span class="ot">&lt;-</span> Fin_by_cat <span class="sc">%&gt;%</span>  </span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">Date =</span> <span class="fu">as.Date</span>(timestamp),</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">Month_Yr =</span> <span class="fu">format</span>(Date, <span class="st">"%Y-%m"</span>)) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<p>As some participants have rent adjustment, new column is created, AdjustedShelter, to see the actual expense on shelter. Summarized the expenses by categories and group by Month_Yr, included two columns of Total Expense and Total Savings for later use.</p>
+<div class="cell">
+<details>
+<summary>Show the code</summary>
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>Fin_summ <span class="ot">&lt;-</span> Fin_split_ym <span class="sc">%&gt;%</span> </span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(participantId, Month_Yr) <span class="sc">%&gt;%</span> </span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarize</span>(</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">Education =</span> <span class="fu">sum</span>(Education, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">Food =</span> <span class="fu">sum</span>(Food, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">Recreation =</span> <span class="fu">sum</span>(Recreation, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">Shelter =</span> <span class="fu">sum</span>(Shelter, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">Wage =</span> <span class="fu">sum</span>(Wage, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">RentAdjustment =</span> <span class="fu">sum</span>(RentAdjustment, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">Count =</span> <span class="fu">n</span>()</span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span> </span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>()<span class="sc">%&gt;%</span></span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">AdjustedShelter =</span> Shelter <span class="sc">+</span> RentAdjustment,</span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">TotalExpense =</span> Food <span class="sc">+</span> Recreation <span class="sc">+</span> AdjustedShelter <span class="sc">+</span> Education,</span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">TotalSavings =</span> Wage <span class="sc">+</span> TotalExpense)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<p>Join the two tables and remove the irrelevant columns for analysis and visualization later.</p>
+<div class="cell">
+<details>
+<summary>Show the code</summary>
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Joined </span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>Merged_table <span class="ot">&lt;-</span> Fin_summ <span class="sc">%&gt;%</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(Participants, <span class="at">by =</span> <span class="st">"participantId"</span>)</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>Merged_table<span class="sc">$</span>RentAdjustment <span class="ot">&lt;-</span> <span class="cn">NULL</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>Merged_table<span class="sc">$</span>Shelter <span class="ot">&lt;-</span> <span class="cn">NULL</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>Merged_table<span class="sc">$</span>Count <span class="ot">&lt;-</span> <span class="cn">NULL</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<div class="cell">
+<details>
+<summary>Show the code</summary>
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>psych<span class="sc">::</span><span class="fu">describe</span>(Merged_table)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output cell-output-stdout">
-<pre><code># A tibble: 6 × 8
-# Groups:   participantId [1]
-  participantId timestamp           Education  Food Recreation Shelter  Wage
-          &lt;dbl&gt; &lt;dttm&gt;                  &lt;dbl&gt; &lt;dbl&gt;      &lt;dbl&gt;   &lt;dbl&gt; &lt;dbl&gt;
-1             0 2022-03-01 00:00:00     -76.0    NA         NA  -1110. 2473.
-2             0 2022-04-01 00:00:00     -38.0    NA         NA   -555.   NA 
-3             0 2022-05-01 00:00:00     -38.0    NA         NA   -555.   NA 
-4             0 2022-06-01 00:00:00     -38.0    NA         NA   -555.   NA 
-5             0 2022-07-01 00:00:00     -38.0    NA         NA   -555.   NA 
-6             0 2022-08-01 00:00:00     -38.0    NA         NA   -555.   NA 
-# ℹ 1 more variable: RentAdjustment &lt;dbl&gt;</code></pre>
+<pre><code>                vars     n     mean      sd   median  trimmed     mad      min
+participantId      1 10691   483.30  294.17   466.00   477.84  370.65     0.00
+Month_Yr*          2 10691     6.43    3.48     6.00     6.43    4.45     1.00
+Education          3 10691   -14.44   29.89     0.00    -6.63    0.00  -182.29
+Food               4 10691  -346.41   85.25  -308.58  -342.51   67.67  -590.42
+Recreation         5 10691  -387.55  249.97  -377.40  -373.71  201.59 -1962.10
+Wage               6 10691  4265.05 2436.30  3613.88  3867.84 1786.00  1600.00
+AdjustedShelter    7 10691  -678.34  302.40  -668.99  -645.24  236.68 -3112.71
+TotalExpense       8 10691 -1426.74  518.11 -1402.26 -1399.42  386.64 -4894.27
+TotalSavings       9 10691  2838.31 2426.81  2268.65  2442.49 1824.90  -362.70
+householdSize     10 10691     1.90    0.81     2.00     1.88    1.48     1.00
+haveKids          11 10691      NaN      NA       NA      NaN      NA      Inf
+age               12 10691    39.13   12.39    39.00    39.18   16.31    18.00
+educationLevel*   13 10691     2.35    0.94     3.00     2.36    1.48     1.00
+interestGroup*    14 10691     5.59    2.90     6.00     5.61    4.45     1.00
+joviality         15 10691     0.47    0.29     0.45     0.46    0.35     0.00
+                     max    range  skew kurtosis    se
+participantId    1010.00  1010.00  0.13    -1.17  2.85
+Month_Yr*          12.00    11.00  0.01    -1.23  0.03
+Education           0.00   182.29 -2.51     7.00  0.29
+Food              -32.00   558.42 -0.13     0.41  0.82
+Recreation          0.00  1962.10 -0.90     2.50  2.42
+Wage            21334.65 19734.65  1.95     5.24 23.56
+AdjustedShelter     0.00  3112.71 -1.50     5.11  2.92
+TotalExpense      -32.00  4862.28 -0.98     3.46  5.01
+TotalSavings    19161.58 19524.28  1.96     5.27 23.47
+householdSize       3.00     2.00  0.18    -1.44  0.01
+haveKids            -Inf     -Inf    NA       NA    NA
+age                60.00    42.00 -0.02    -1.21  0.12
+educationLevel*     4.00     3.00 -0.28    -1.14  0.01
+interestGroup*     10.00     9.00 -0.05    -1.24  0.03
+joviality           1.00     1.00  0.21    -1.15  0.00</code></pre>
 </div>
 </div>
-<div class="cell">
-<details>
-<summary>Show the code</summary>
-<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>Fin_split_ym <span class="ot">&lt;-</span> Fin_by_cat <span class="sc">%&gt;%</span>  </span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(</span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">Date =</span> <span class="fu">as.Date</span>(timestamp),</span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">Month_Yr =</span> <span class="fu">format</span>(Date, <span class="st">"%Y-%m"</span>)) </span>
-<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(Fin_split_ym)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</details>
-<div class="cell-output cell-output-stdout">
-<pre><code># A tibble: 6 × 10
-# Groups:   participantId [1]
-  participantId timestamp           Education  Food Recreation Shelter  Wage
-          &lt;dbl&gt; &lt;dttm&gt;                  &lt;dbl&gt; &lt;dbl&gt;      &lt;dbl&gt;   &lt;dbl&gt; &lt;dbl&gt;
-1             0 2022-03-01 00:00:00     -76.0    NA         NA  -1110. 2473.
-2             0 2022-04-01 00:00:00     -38.0    NA         NA   -555.   NA 
-3             0 2022-05-01 00:00:00     -38.0    NA         NA   -555.   NA 
-4             0 2022-06-01 00:00:00     -38.0    NA         NA   -555.   NA 
-5             0 2022-07-01 00:00:00     -38.0    NA         NA   -555.   NA 
-6             0 2022-08-01 00:00:00     -38.0    NA         NA   -555.   NA 
-# ℹ 3 more variables: RentAdjustment &lt;dbl&gt;, Date &lt;date&gt;, Month_Yr &lt;chr&gt;</code></pre>
-</div>
-</div>
-<div class="cell">
-<details>
-<summary>Show the code</summary>
-<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>Fin_summ <span class="ot">&lt;-</span> Fin_split_ym <span class="sc">%&gt;%</span> </span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(participantId, Month_Yr) <span class="sc">%&gt;%</span> </span>
-<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarize</span>(</span>
-<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">Education =</span> <span class="fu">sum</span>(Education, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
-<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">Food =</span> <span class="fu">sum</span>(Food, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
-<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">Recreation =</span> <span class="fu">sum</span>(Recreation, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
-<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">Shelter =</span> <span class="fu">sum</span>(Shelter, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
-<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">Wage =</span> <span class="fu">sum</span>(Wage, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
-<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">RentAdjustment =</span> <span class="fu">sum</span>(RentAdjustment, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
-<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">Count =</span> <span class="fu">n</span>()</span>
-<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span> </span>
-<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>()<span class="sc">%&gt;%</span></span>
-<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
-<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">TotalIncome =</span> Wage <span class="sc">+</span> RentAdjustment,</span>
-<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">TotalExpense =</span> Food <span class="sc">+</span> Recreation <span class="sc">+</span> Shelter <span class="sc">+</span> Education,</span>
-<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">TotalSavings =</span> TotalIncome <span class="sc">-</span> TotalExpense)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</details>
-</div>
-<div class="cell">
-<details>
-<summary>Show the code</summary>
-<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>Fin_final <span class="ot">&lt;-</span> Fin_summ <span class="sc">%&gt;%</span> </span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(participantId) <span class="sc">%&gt;%</span> </span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarize</span>(</span>
-<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">Education =</span> <span class="fu">sum</span>(Education, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
-<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">Food =</span> <span class="fu">sum</span>(Food, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
-<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">Recreation =</span> <span class="fu">sum</span>(Recreation, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
-<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">Shelter =</span> <span class="fu">sum</span>(Shelter, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
-<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">Wage =</span> <span class="fu">sum</span>(Wage, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
-<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">RentAdjustment =</span> <span class="fu">sum</span>(RentAdjustment, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
-<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">TotalIncome =</span> <span class="fu">sum</span>(TotalIncome, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
-<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">TotalExpense =</span> <span class="fu">sum</span>(TotalExpense, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
-<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">TotalIncome =</span> <span class="fu">sum</span>(TotalIncome, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>  )<span class="sc">%&gt;%</span></span>
-<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>()</span>
-<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>Joined_table <span class="ot">&lt;-</span> <span class="fu">inner_join</span>(Participants,Fin_final, <span class="at">by =</span> <span class="st">'participantId'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</details>
-</div>
-<div class="cell">
-<details>
-<summary>Show the code</summary>
-<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(<span class="at">data=</span>Participants,</span>
-<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>       <span class="fu">aes</span>(<span class="at">y =</span> joviality,       </span>
-<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>           <span class="at">x=</span> educationLevel)) <span class="sc">+</span>    </span>
-<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_boxplot</span>()   </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</details>
-<div class="cell-output-display">
-<p><img src="Take-home_Ex01_files/figure-html/unnamed-chunk-7-1.png" class="img-fluid" width="672"></p>
-</div>
-</div>
-<p><br>
-</p>
 
 
+</section>
 </section>
 
 </main> <!-- /main -->

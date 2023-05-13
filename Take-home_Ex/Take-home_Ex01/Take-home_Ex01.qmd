@@ -1,6 +1,6 @@
 ---
 title: "Take Home Exercise 1"
-subtitle: Rent
+subtitle: Visual Anlytics of Demographics and Financial Characteristics of the Residents in the City of Engagement to Aid Revitalization Grant Allocation
 format: 
   html: 
     code-fold: true
@@ -13,13 +13,21 @@ execute:
 
 # Task
 
-# Getting Started
+City of Engagement, with a total population of 50,000, is a small city located at Country of Nowhere. The city serves as a service centre of an agriculture region surrounding the city. The main agriculture of the region is fruit farms and vineyards. The local council of the city is in the process of preparing the Local Plan 2023. A sample survey of 1000 representative residents had been conducted to collect data related to their household demographic and spending patterns, among other things. The city aims to use the data to assist with their major community revitalization efforts, including how to allocate a very large city renewal grant they have recently received.
 
-```{r}
-pacman::p_load(tidyverse, ggiraph, plotly, patchwork, DT, gifski, gapminder,gganimate, ggrepel, patchwork, ggthemes, hrbrthemes,FunnelPlotR, knitr, ggstatsplot, crosstalk, ggdist, lubridate, dyplyr)
-```
+The following analysis on the sample survey to reveal the demographic and financial characteristics of the city of Engagement byusing appropriate **static and interactive statistical graphics** methods. This analysis will be showing user-friendly and interactive solution that helps city managers and planners to explore the complex data in an engaging way and reveal hidden patterns.
 
 # Data Preparation
+
+## Load Packages
+
+```{r}
+pacman::p_load(ggstatsplot, ggthemes, plotly, corrplot, lubridate, ggpubr, plotly, treemap, d3treeR, hrbrthemes, ggrepel, RColorBrewer, gganimate, viridis, ggridges, ggrepel, testthat, hmisc, tidyverse)
+```
+
+## Data importing and wraggling
+
+Import and check the columns in the participant dataset.
 
 ```{r}
 Participants <- read_csv("data/participants.csv") %>%
@@ -27,6 +35,8 @@ Participants <- read_csv("data/participants.csv") %>%
 
 head(Participants)
 ```
+
+Import and read the FinancialJournal Dataset, extract out Category to match the participants to be columns.
 
 ```{r}
 FinancialJournal <- read_csv("data/FinancialJournal.csv") %>%
@@ -37,18 +47,18 @@ Fin_by_cat <- FinancialJournal %>%
   group_by(participantId, category, timestamp) %>%
   summarize(amount = sum(amount)) %>%
   pivot_wider(names_from = category, values_from = amount)
-
-head(Fin_by_cat)
 ```
+
+Extract the month_year out of timestamp.
 
 ```{r}
 Fin_split_ym <- Fin_by_cat %>%  
     mutate(
     Date = as.Date(timestamp),
     Month_Yr = format(Date, "%Y-%m")) 
-
-head(Fin_split_ym)
 ```
+
+As some participants have rent adjustment, new column is created, AdjustedShelter, to see the actual expense on shelter. Summarized the expenses by categories and group by Month_Yr, included two columns of Total Expense and Total Savings for later use.
 
 ```{r}
 Fin_summ <- Fin_split_ym %>% 
@@ -64,35 +74,24 @@ Fin_summ <- Fin_split_ym %>%
   ) %>% 
   ungroup()%>%
   mutate(
-    TotalIncome = Wage + RentAdjustment,
-    TotalExpense = Food + Recreation + Shelter + Education,
-    TotalSavings = TotalIncome - TotalExpense)
+    AdjustedShelter = Shelter + RentAdjustment,
+    TotalExpense = Food + Recreation + AdjustedShelter + Education,
+    TotalSavings = Wage + TotalExpense)
+
+```
+
+Join the two tables and remove the irrelevant columns for analysis and visualization later.
+
+```{r}
+#Joined 
+Merged_table <- Fin_summ %>%
+  left_join(Participants, by = "participantId")
+
+Merged_table$RentAdjustment <- NULL
+Merged_table$Shelter <- NULL
+Merged_table$Count <- NULL
 ```
 
 ```{r}
-Fin_final <- Fin_summ %>% 
-  group_by(participantId) %>% 
-  summarize(
-    Education = sum(Education, na.rm = TRUE),
-    Food = sum(Food, na.rm = TRUE),
-    Recreation = sum(Recreation, na.rm = TRUE),
-    Shelter = sum(Shelter, na.rm = TRUE),
-    Wage = sum(Wage, na.rm = TRUE),
-    RentAdjustment = sum(RentAdjustment, na.rm = TRUE),
-    TotalIncome = sum(TotalIncome, na.rm = TRUE),
-    TotalExpense = sum(TotalExpense, na.rm = TRUE),
-    TotalIncome = sum(TotalIncome, na.rm = TRUE)
-  )%>%
-  ungroup()
-
-Joined_table <- inner_join(Participants,Fin_final, by = 'participantId')
+psych::describe(Merged_table)
 ```
-
-```{r}
-ggplot(data=Participants,
-       aes(y = joviality,       
-           x= educationLevel)) +    
-  geom_boxplot()   
-```
-
-\
