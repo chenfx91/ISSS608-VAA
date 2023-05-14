@@ -145,7 +145,7 @@ Merged_table <- Fin_byparticipant %>%
 Check for any missing values.
 
 ```{r}
-#| echo: True
+#| echo: TRUE
 any(is.na(Merged_table))
 ```
 
@@ -414,12 +414,16 @@ plot_ly(data = Merged_table_filtered,
         color = ~ educationLevel)
 ```
 
+The above graph show that the higher the spending, the happier the person no matter the educational levels of the person.
+
 ```{r}
 plot_ly(data = Merged_table_filtered, 
         x = ~joviality, 
         y = ~Food, 
         color = ~educationLevel)
 ```
+
+For food spending, its interestingly showing stepped distribution, across all educational levels, people spend more than \$4500 tend to feel happier than those below.
 
 ```{r}
 plot_ly(data = Merged_table_filtered, 
@@ -428,6 +432,8 @@ plot_ly(data = Merged_table_filtered,
         color = ~educationLevel)
 ```
 
+For housing spend, this is the least linearly correlated with happiness, we can see that joviality score is quite evenly spread across all educational groups. However, interesting observations saw for people spend above 12k on housing, their joviality score all above 0.65. Majority of those who can spend 12k or more on housing are Graduates and Bachelors. On this note, it is likely that these people who spend more on housing, makes them happy to make house to the way they want it to be.
+
 ```{r}
 plot_ly(data = Merged_table_filtered, 
         x = ~joviality, 
@@ -435,7 +441,11 @@ plot_ly(data = Merged_table_filtered,
         color = ~educationLevel)
 ```
 
+For wage, it is negatively correlated to joviality score (i.e. the more the person earn, the unhappy he gets). This trend is true across all educational levels. However, this is to note that only when wage hits 75k when we look at the total sample population, we start to see more significant amount of people become unhappy; when we filter to see only High School or Low educational level graduates, the wage that make them unhappy is about 50k. This could be interpreted that at different education level, there might be the higher amount of stress and time spent that comes with the higher wage within their educational level.
+
 ## Visualizing the uncertainty of point estimates
+
+We would like to exam further into uncertainties of the point estimates by educational level. With median used as point of estimate, quantile interval is used instead of confidence level (CI) , 95% and 99% intervals are used as well as these are the commonly used CI for hypothesis testing such as the ones above. As shown in the graph below, we can see that true (unknown) estimate indeed lie within the interval.
 
 ```{r}
 Merged_table_filtered %>%
@@ -443,48 +453,65 @@ Merged_table_filtered %>%
              y = joviality)) +
   stat_pointinterval(
     aes(interval_color = stat(level)),
-    .width = c(0.95,0.99
-               ),
+    .width = c(0.95,0.99),
     .point = median,
     .interval = qi,
     point_color = "darkred",
     show.legend = FALSE) +
   labs(
-    title = "Visualising confidence intervals of median joviality score",
+    title = "Visualising confidence intervals of median joviality score by Educational Levels",
     subtitle = "Median Point + Multiple-interval plot")
 ```
 
 ## Other Interesting Observations
 
-```{r}
-ggplot(data=Merged_table_filtered, 
-       aes(y = joviality, x= interestGroup)) +
-  geom_boxplot() +
-  stat_summary(geom = "point",
-               fun="mean",
-               colour ="red",
-               size=2) +
-  stat_summary(aes(label = round(after_stat(y), 2)), fun=mean, geom = "label_repel", size=3, angle=150) +
-  labs(y= 'Joviality', x= 'Age Group',
-       title = "Distribution of Joviality across Age Groups by Kids Status") +
-  theme(axis.title.y= element_text(angle=0), axis.ticks.x= element_blank(),
-        axis.line= element_line(color= 'grey'))
-```
+As we know that recreation could make people happier, it could be helpful to look into which interest groups get people make people happier.
 
 ```{r}
 ggplot(data=Merged_table_filtered, 
        aes(y = joviality, x= interestGroup)) +
   geom_boxplot() +
   stat_summary(geom = "point",
-               fun="mean",
+               fun="median",
+               colour ="red",
+               size=2) +
+  stat_summary(aes(label = round(after_stat(y), 2)), fun=mean, geom = "label_repel", size=3, angle=150) +
+  labs(y= 'Joviality', x= 'Interest Groups',
+       title = "Distribution of Joviality across Age Groups by Interest Groups") +
+  theme(axis.title.y= element_text(angle=90), axis.ticks.x= element_blank(),
+        axis.line= element_line(color= 'grey'))
+```
+
+The above boxplot show that Group E has the highest score. Separate the overall distribution to two groups of people have kids or not have kids, we can see for group B, C, D and H, people with kids are much unhappier, while for group G and I, people with kids are much happier.
+
+```{r}
+ggplot(data=Merged_table_filtered, 
+       aes(y = joviality, x= interestGroup)) +
+  geom_boxplot() +
+  stat_summary(geom = "point",
+               fun="median",
                colour ="red",
                size=2) +
   stat_summary(aes(label = round(after_stat(y), 2)), fun=mean, geom = "label_repel", size=3, angle=150) +
   facet_grid(haveKids ~.) +
-  labs(y= 'Joviality', x= 'Age Group',
-       title = "Distribution of Joviality across Age Groups by Kids Status") +
-  theme(axis.title.y= element_text(angle=0), axis.ticks.x= element_blank(),
+  labs(y= 'Joviality', x= 'Interest Groups',
+       title = "Distribution of Joviality across Age Groups by Interest Groups")  +
+  theme(axis.title.y= element_text(angle=90), axis.ticks.x= element_blank(),
         axis.line= element_line(color= 'grey'))
 ```
 
 # Recommendation
+
+For the grant allocation, it could be channeled to several areas below,
+
+1.  Set up a grant for upskilling. As people with higher education tend to be happier, the grant could be given proportionally to one's wage. As shown in the interactive graph for wage, the base salary for higher educated people are higher and most of them are evenly distributed on the joviality score, by upskilling the lower educated people, they do not need to work as hard to generate the same amount of wage
+2.  Give out food vouchers. As we see how a step up to food spending could bring happiness to the people, the planning community could give the food voucher for citizens to fulfill their daily necessary meals while they are able to use their current budget to enjoy better food.
+3.  Build a better recreational centre. As recreational spend seems to have the strongest correlation with happiness of the people. The planning community can consider to improve current facilities or build more for people to enjoy
+
+Other efforts to be consider,
+
+1.  Promote the right interest groups to people have or not have kids, so that they can find the right support at different stage in life.
+
+# Acknowledgement
+
+Most of the codes and concepts that this analysis has adapted were from Prof Kam's [Lesson Plans](https://r4va.netlify.app/). The portion on uncertainty of point estimates has referred to our senior Michael Djohan's [take-home exercise 3](https://isss608-michaeldj.netlify.app/take-home_ex/take-home_ex03/take-home_ex03#visualising-the-uncertainty-of-point-estimates).
