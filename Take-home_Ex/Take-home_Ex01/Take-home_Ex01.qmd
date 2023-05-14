@@ -99,12 +99,21 @@ Fin_summ$TotalExpense <- abs(Fin_summ$TotalExpense)
 Join the two tables and remove the irrelevant columns for analysis and visualization later.
 
 ```{r}
-#Joined 
-Merged_table <- Fin_summ %>%
-  left_join(Participants, by = "participantId")
+Fin_byparticipant <- Fin_summ %>%
+  group_by(participantId) %>%
+  summarize(
+    Education = sum(Education, na.rm = TRUE),
+    Food = sum(Food, na.rm = TRUE),
+    Recreation = sum(Recreation, na.rm = TRUE),
+    Wage = sum(Wage, na.rm = TRUE),
+    AdjustedShelter = sum(AdjustedShelter, na.rm = TRUE),
+    TotalExpense = sum (TotalExpense, na.rm = TRUE),
+    TotalSavings = sum(TotalSavings, na.rm = TRUE)
+  ) 
 
-Merged_table$RentAdjustment <- NULL
-Merged_table$Shelter <- NULL
+Merged_table <- Fin_byparticipant %>%
+  inner_join(Participants, by = "participantId")
+
 ```
 
 Check for any missing values.
@@ -120,61 +129,260 @@ psych::describe(Merged_table)
 ```
 
 ```{r}
-Fin_byparticipant <- Fin_summ %>%
-  group_by(participantId) %>%
-  summarize(
-    Education = sum(Education, na.rm = TRUE),
-    Food = sum(Food, na.rm = TRUE),
-    Recreation = sum(Recreation, na.rm = TRUE),
-    Wage = sum(Wage, na.rm = TRUE),
-    AdjustedShelter = sum(AdjustedShelter, na.rm = TRUE),
-    TotalExpense = sum (TotalExpense, na.rm = TRUE),
-    TotalSavings = sum(TotalSavings, na.rm = TRUE)
-  ) 
-
-Merged_table2 <- Fin_byparticipant %>%
-  inner_join(Participants, by = "participantId")
-
-```
-
-# Visualisation
-
-```{r}
-ggplot(data=Merged_table2, 
-       aes(y = joviality,       
-           x= haveKids)) +    
-  geom_boxplot()+
-    geom_point(position="jitter", 
-             size = 0.5)  +
-    stat_summary(geom = "point",       
-               fun.y="mean",         
-               colour ="red",        
-               size=4) +
-  stat_summary(aes(label = round(after_stat(y), 2)), fun=mean, geom = "label_repel", size=3, angle=150)
+ggplot(data=Merged_table, 
+       aes(x= TotalExpense, 
+           y= joviality)) +
+  geom_point()    
 ```
 
 ```{r}
-ggplot(Merged_table2, 
-       aes(x = joviality, 
-           y = educationLevel,
-           fill = stat(x))) +
-  geom_density_ridges_gradient(
-    scale = 2,
-    rel_min_height = 0.01,
-    fill = lighten("#7097BB", .3),
-    color = "white") +
-  scale_x_continuous(
-    name = "Joviality Scores",
-    expand = c(0, 0)
-  ) +
-  scale_y_discrete(name = NULL, expand = expansion(add = c(0.2, 2.6))) +
-  theme_ridges() +
-  facet_wrap(~ haveKids, nrow = 1)
+TotalExpense_lower <- quantile(Merged_table$TotalExpense, 0.13)
 ```
 
 ```{r}
-ggplot(data=Merged_table2, 
-       aes(y = joviality, x= age_group)) +
+Merged_table_filtered <- Merged_table %>%
+  filter(TotalExpense >= TotalExpense_lower)
+
+ggplot(data=Merged_table_filtered, 
+       aes(x= TotalExpense, 
+           y= joviality)) +
+  geom_point() 
+```
+
+# Visualization
+
+## Two-Sample Test
+
+Using [*ggbetweenstats()*](https://indrajeetpatil.github.io/ggstatsplot/reference/ggbetweenstats.html) to understand if having kids will make people feel
+
+```{r}
+ggbetweenstats(
+  data = Merged_table_filtered,
+  x = haveKids, 
+  y = joviality,
+  type = "np",
+  messages = FALSE
+)
+```
+
+```{r}
+ggbetweenstats(
+  data = Merged_table_filtered,
+  x = householdSize, 
+  y = joviality,
+  type = "p",
+  mean.ci = TRUE, 
+  pairwise.comparisons = TRUE, 
+  pairwise.display = "s",
+  p.adjust.method = "fdr",
+  messages = FALSE
+)
+  
+```
+
+```{r}
+ggbetweenstats(
+  data = Merged_table_filtered,
+  x = educationLevel, 
+  y = joviality,
+  type = "p",
+  mean.ci = TRUE, 
+  pairwise.comparisons = TRUE, 
+  pairwise.display = "s",
+  p.adjust.method = "fdr",
+  messages = FALSE
+)
+```
+
+```{r}
+ggbetweenstats(
+  data = Merged_table_filtered,
+  x = age_group, 
+  y = joviality,
+  type = "np",
+  mean.ci = TRUE, 
+  pairwise.comparisons = TRUE, 
+  pairwise.display = "s",
+  p.adjust.method = "fdr",
+  messages = FALSE
+)
+```
+
+```{r}
+ggbetweenstats(
+  data = Merged_table_filtered,
+  x = interestGroup, 
+  y = joviality,
+  type = "p",
+  mean.ci = TRUE, 
+  pairwise.comparisons = TRUE, 
+  pairwise.display = "s",
+  p.adjust.method = "fdr",
+  messages = FALSE
+)
+```
+
+```{r}
+ggplot(Merged_table_filtered, 
+       aes(x = educationLevel, 
+           y = joviality)) +
+  stat_halfeye(adjust = 0.5,
+               justification = -0.2,
+               .width = 0,
+               point_colour = NA) +
+  geom_boxplot(width = .20,
+               outlier.shape = NA) +
+    stat_summary(geom = "point",
+               fun="mean",
+               colour ="red",
+               size=2) +
+  stat_summary(aes(label = round(after_stat(y), 2)), fun=mean, geom = "label_repel", size=3, angle=150)+
+  coord_flip() +
+  theme_economist()
+```
+
+From the Correlogram below, we have a few observations below,
+
+1.  There are a few pairs with high collinearity: TotalSavings-Wage, TotalExpense-AdjustedShelter, TotalExpense-Recreation,
+2.  Jovaility Score has linear relationships with Wage received, Recreation, Food and Housing Expenses
+
+```{r}
+ggstatsplot::ggcorrmat(
+  data = Merged_table_filtered,
+  cor.vars = c(2:8,13),
+    ggcorrplot.args = list(outline.color = "black", 
+                         hc.order = TRUE,
+                         tl.cex = 10),
+  title    = "Correlogram for Merged_table2 dataset",
+  subtitle = "Three pairs are no significant at p < 0.05"
+    )
+```
+
+```{r}
+p1 <- ggplot(data=Merged_table_filtered, 
+       aes(y = Recreation, x= educationLevel)) +
+  geom_boxplot() +
+  stat_summary(geom = "point",
+               fun="mean",
+               colour ="red",
+               size=2) +
+  stat_summary(aes(label = round(after_stat(y), 2)), fun=mean, geom = "label_repel", size=3, angle=150) +
+  labs(y= 'Recreation Expense', x= 'Educational Level',
+       title = "Distribution of Recreation Expense by Education Level") +
+  theme(axis.title.y= element_text(angle=90), axis.ticks.x= element_blank(),
+        axis.line= element_line(color= 'grey'))
+
+p2 <- ggplot(data=Merged_table_filtered, 
+       aes(y = Food, x= educationLevel)) +
+  geom_boxplot() +
+  stat_summary(geom = "point",
+               fun="mean",
+               colour ="red",
+               size=2) +
+  stat_summary(aes(label = round(after_stat(y), 2)), fun=mean, geom = "label_repel", size=3, angle=150) +
+  labs(y= 'Food Expense', x= 'Educational Level',
+       title = "Distribution of Food Expense by Education Level") +
+  theme(axis.title.y= element_text(angle=90), axis.ticks.x= element_blank(),
+        axis.line= element_line(color= 'grey'))
+
+p3 <- ggplot(data=Merged_table_filtered, 
+       aes(y = AdjustedShelter, x= educationLevel)) +
+  geom_boxplot() +
+  stat_summary(geom = "point",
+               fun="mean",
+               colour ="red",
+               size=2) +
+  stat_summary(aes(label = round(after_stat(y), 2)), fun=mean, geom = "label_repel", size=3, angle=150) +
+  labs(y= 'Housing Expense', x= 'Educational Level',
+       title = "Distribution of Housing Expense by Educational Level") +
+  theme(axis.title.y= element_text(angle=90), axis.ticks.x= element_blank(),
+        axis.line= element_line(color= 'grey'))
+
+p4 <- ggplot(data=Merged_table_filtered, 
+       aes(y = Wage, x= educationLevel)) +
+  geom_boxplot() +
+  stat_summary(geom = "point",
+               fun="mean",
+               colour ="red",
+               size=2) +
+  stat_summary(aes(label = round(after_stat(y), 2)), fun=mean, geom = "label_repel", size=3, angle=150) +
+  labs(y= 'Wage Received', x= 'Educational Level',
+       title = "Distribution of Wage by Educational Level") +
+  theme(axis.title.y= element_text(angle=90), axis.ticks.x= element_blank(),
+        axis.line= element_line(color= 'grey'))
+```
+
+```{r}
+(p1/p2)|(p3/p4)
+```
+
+```{r}
+plot_ly(data = Merged_table_filtered, 
+        x = ~joviality, 
+        y = ~Recreation, 
+        color = ~ educationLevel)
+```
+
+```{r}
+plot_ly(data = Merged_table_filtered, 
+        x = ~joviality, 
+        y = ~Food, 
+        color = ~educationLevel)
+```
+
+```{r}
+plot_ly(data = Merged_table_filtered, 
+        x = ~joviality, 
+        y = ~AdjustedShelter, 
+        color = ~educationLevel)
+```
+
+```{r}
+plot_ly(data = Merged_table_filtered, 
+        x = ~joviality, 
+        y = ~Wage, 
+        color = ~educationLevel)
+```
+
+## Visualizing the uncertainty of point estimates
+
+```{r}
+Merged_table_filtered %>%
+  ggplot(aes(x = educationLevel, 
+             y = joviality)) +
+  stat_pointinterval(
+    aes(interval_color = stat(level)),
+    .width = c(0.95,0.99
+               ),
+    .point = median,
+    .interval = qi,
+    point_color = "darkred",
+    show.legend = FALSE) +
+  labs(
+    title = "Visualising confidence intervals of median joviality score",
+    subtitle = "Median Point + Multiple-interval plot")
+```
+
+## Other Interesting Observations
+
+```{r}
+ggplot(data=Merged_table_filtered, 
+       aes(y = joviality, x= interestGroup)) +
+  geom_boxplot() +
+  stat_summary(geom = "point",
+               fun="mean",
+               colour ="red",
+               size=2) +
+  stat_summary(aes(label = round(after_stat(y), 2)), fun=mean, geom = "label_repel", size=3, angle=150) +
+  labs(y= 'Joviality', x= 'Age Group',
+       title = "Distribution of Joviality across Age Groups by Kids Status") +
+  theme(axis.title.y= element_text(angle=0), axis.ticks.x= element_blank(),
+        axis.line= element_line(color= 'grey'))
+```
+
+```{r}
+ggplot(data=Merged_table_filtered, 
+       aes(y = joviality, x= interestGroup)) +
   geom_boxplot() +
   stat_summary(geom = "point",
                fun="mean",
@@ -186,18 +394,4 @@ ggplot(data=Merged_table2,
        title = "Distribution of Joviality across Age Groups by Kids Status") +
   theme(axis.title.y= element_text(angle=0), axis.ticks.x= element_blank(),
         axis.line= element_line(color= 'grey'))
-```
-
-From the figure below, we can see that, joviality is directly correlated to TotalExpense and Recreation while negatively correlated with TotalSavings and Wage.
-
-```{r}
-ggstatsplot::ggcorrmat(
-  data = Merged_table2,
-  cor.vars = c(2:8,13),
-    ggcorrplot.args = list(outline.color = "black", 
-                         hc.order = TRUE,
-                         tl.cex = 10),
-  title    = "Correlogram for Merged_table2 dataset",
-  subtitle = "Four pairs are no significant at p < 0.05"
-    )
 ```
