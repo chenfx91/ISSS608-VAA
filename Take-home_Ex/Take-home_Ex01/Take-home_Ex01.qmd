@@ -9,9 +9,11 @@ author: "Fangxian"
 execute: 
   eval: true
   warning: false
+date: "14 May 2023"
+date-modified: "`r Sys.Date()`"
 ---
 
-# Task
+# Background and Task
 
 City of Engagement, with a total population of 50,000, is a small city located at Country of Nowhere. The city serves as a service centre of an agriculture region surrounding the city. The main agriculture of the region is fruit farms and vineyards. The local council of the city is in the process of preparing the Local Plan 2023. A sample survey of 1000 representative residents had been conducted to collect data related to their household demographic and spending patterns, among other things. The city aims to use the data to assist with their major community revitalization efforts, including how to allocate a very large city renewal grant they have recently received.
 
@@ -21,13 +23,35 @@ The following analysis on the sample survey to reveal the demographic and financ
 
 ## Load Packages
 
+The code chunk below uses `pacman::p_load()` to check if packages are installed. If they are, they will be launched into R. The packages installed are
+
+-   `tidyverse`: A collection of core packages designed for data science, used extensively for data preparation and wrangling.
+
+-   `ggplot2`: Used for plotting different types of graphs.
+
+-   `plotly`: Used for creating interactive web-based graphs.
+
+-   `ggdist`: Used for visualising distribution and uncertainty.
+
+-   `ggridges`: a `ggplot2` extension specially designed for plotting ridgeline plots.
+
+-   `ggthemes`: Provide additional themes for `ggplot2` .
+
+-   `ggstatsplot`: Used for creating graphics with details from statistical tests.
+
+-   `pacthwork`: Used to combine plots.
+
+-   `ggrepel`: ggrepel provides geoms for `ggplot2` to repel overlapping text labels.
+
+    All packages can be found within CRAN.
+
 ```{r}
 pacman::p_load(tidyverse, ggplot2,plotly, ggdist, ggridges, ggthemes, colorspace, ggstatsplot, patchwork, ggrepel)
 ```
 
 ## Data importing and wraggling
 
-Import and check the columns in the participant dataset.
+Import and check the columns in the Participant dataset.
 
 ```{r}
 Participants <- read_csv("data/participants.csv") %>%
@@ -35,6 +59,8 @@ Participants <- read_csv("data/participants.csv") %>%
 
 glimpse(Participants)
 ```
+
+Group the participants into 9 different Age Groups for easier analysis later.
 
 ```{r}
 Participants$age_group <- cut(Participants$age,
@@ -46,7 +72,7 @@ Participants$age_group <- cut(Participants$age,
 Participants$age <- NULL
 ```
 
-Import and read the FinancialJournal Dataset, extract out Category to match the participants to be columns.
+Import and read the FinancialJournal Dataset, extract out Category to the columns.
 
 ```{r}
 FinancialJournal <- read_csv("data/FinancialJournal.csv") %>%
@@ -119,6 +145,7 @@ Merged_table <- Fin_byparticipant %>%
 Check for any missing values.
 
 ```{r}
+#| echo: True
 any(is.na(Merged_table))
 ```
 
@@ -128,6 +155,8 @@ Summary of the statistics of the merged_table
 psych::describe(Merged_table)
 ```
 
+There are some high range in the TotalExpense, this is an important parameter to note, as the grant would likely to be used in the area where the citizens are spending at to make them happier. We plot the graph below to understand more on the overall spending pattern.
+
 ```{r}
 ggplot(data=Merged_table, 
        aes(x= TotalExpense, 
@@ -135,11 +164,11 @@ ggplot(data=Merged_table,
   geom_point()    
 ```
 
-```{r}
-TotalExpense_lower <- quantile(Merged_table$TotalExpense, 0.13)
-```
+From the above graph, we can see that there are a group of sample have abnormally low spending and their happiness does not seem to matter on the amount they spend. These are the outliers in the sample that we should exclude from the analysis as it will affect the accuracy how we are determining the tangible spending that makes the citizens happy. Below code are performed to removed these outliers and check the graph again after the removal.
 
 ```{r}
+TotalExpense_lower <- quantile(Merged_table$TotalExpense, 0.13)
+
 Merged_table_filtered <- Merged_table %>%
   filter(TotalExpense >= TotalExpense_lower)
 
@@ -151,9 +180,35 @@ ggplot(data=Merged_table_filtered,
 
 # Visualization
 
+Now the data is ready, we would like to find out, how each factors could affect the happiness for the citizens.
+
+## Normality Assumption Check
+
+To check is joviality of the sample are normally distributed, we plotted the below bar chart and density graph to understand.
+
+```{r}
+p1 <- ggplot(data=Merged_table_filtered, 
+       aes(x= joviality)) +
+    geom_histogram(bins=20,            
+                 color="black",      
+                 fill="light blue")
+
+p2 <- ggplot(data=Merged_table_filtered, 
+       aes(x= joviality)) +
+    geom_density()
+
+p1+p2
+```
+
+We can see from the above group that, joviality scores are not normally distributed in this sample.
+
 ## Two-Sample Test
 
-Using [*ggbetweenstats()*](https://indrajeetpatil.github.io/ggstatsplot/reference/ggbetweenstats.html) to understand if having kids will make people feel
+Since joviality is not normally distributed, we use [*ggbetweenstats()*](https://indrajeetpatil.github.io/ggstatsplot/reference/ggbetweenstats.html) to understand if having kids have an impact on people's happiness. Non-parametric test (Mann-Whitney U test) was carried out for the below hyphothesis.
+
+-   H0: There is no difference between average joviality score of people have kids.
+
+-   H1: There is difference between average joviality score of people have kids.
 
 ```{r}
 ggbetweenstats(
@@ -165,12 +220,22 @@ ggbetweenstats(
 )
 ```
 
+Since, p-value is greater than 0.05, we conclude that there is no difference between between average joviality score of people have kids.
+
+## One-Way ANOVA Test
+
+As other categorical parameters have more than 2 groups, we use One-Way ANOVA test for the following hypothesis.
+
+-   H0: There is no difference among average joviality score of people of different educational levels.
+
+-   H1: There is difference among average joviality score of people of different educational levels.
+
 ```{r}
 ggbetweenstats(
   data = Merged_table_filtered,
-  x = householdSize, 
+  x = educationLevel, 
   y = joviality,
-  type = "p",
+  type = "np",
   mean.ci = TRUE, 
   pairwise.comparisons = TRUE, 
   pairwise.display = "s",
@@ -180,22 +245,22 @@ ggbetweenstats(
   
 ```
 
+Since, p-value is less than 0.05, we conclude that there is difference among average joviality score of people of different educational levels. We repeat the same test for the other parameters, i.e. household sizes, age groups, and conclude that these 3 parameters did not have significant statistical significance in affecting the citizen's joviality score.
+
 ```{r}
-ggbetweenstats(
+p3 <- ggbetweenstats(
   data = Merged_table_filtered,
-  x = educationLevel, 
+  x = householdSize, 
   y = joviality,
-  type = "p",
+  type = "np",
   mean.ci = TRUE, 
   pairwise.comparisons = TRUE, 
   pairwise.display = "s",
   p.adjust.method = "fdr",
   messages = FALSE
 )
-```
 
-```{r}
-ggbetweenstats(
+p4 <- ggbetweenstats(
   data = Merged_table_filtered,
   x = age_group, 
   y = joviality,
@@ -206,21 +271,23 @@ ggbetweenstats(
   p.adjust.method = "fdr",
   messages = FALSE
 )
-```
 
-```{r}
-ggbetweenstats(
+p5 <- ggbetweenstats(
   data = Merged_table_filtered,
   x = interestGroup, 
   y = joviality,
-  type = "p",
+  type = "np",
   mean.ci = TRUE, 
   pairwise.comparisons = TRUE, 
   pairwise.display = "s",
   p.adjust.method = "fdr",
   messages = FALSE
 )
+
+p3|(p4/p5)
 ```
+
+We would like to look into more on the joviality score is distributed among people of different education levels and we run the code chunk below.
 
 ```{r}
 ggplot(Merged_table_filtered, 
@@ -241,10 +308,22 @@ ggplot(Merged_table_filtered,
   theme_economist()
 ```
 
+**Insight:**
+
+1.  People of Low education level, has lower average joviality score than the rest, its median is also much lower and far from its average point due to a large number of them have low scores as shown by the higher ridge.
+
+2.  Graduates have the highest joviality score, followed by Bachelors and High School or College graduates.
+
+3.  Compared to the Graduates and Bachelors, there is also a large amount of High School or College graduates are of lower joviality score.
+
+## Correlation Matrix
+
+Now we want to look at the continuous variables to understand how educational levels could play a part in affecting joviality score.
+
 From the Correlogram below, we have a few observations below,
 
-1.  There are a few pairs with high collinearity: TotalSavings-Wage, TotalExpense-AdjustedShelter, TotalExpense-Recreation,
-2.  Jovaility Score has linear relationships with Wage received, Recreation, Food and Housing Expenses
+1.  There are a few pairs with high collinearity: TotalSavings-Wage, TotalExpense-AdjustedShelter, TotalExpense-Recreation. Hence, we will only consider Wage, AdjustedShelter and Recreation for the analysis below.
+2.  Joviality Score has linear relationships with Wage received, Recreation, Food and Housing Expenses
 
 ```{r}
 ggstatsplot::ggcorrmat(
@@ -259,7 +338,7 @@ ggstatsplot::ggcorrmat(
 ```
 
 ```{r}
-p1 <- ggplot(data=Merged_table_filtered, 
+p6 <- ggplot(data=Merged_table_filtered, 
        aes(y = Recreation, x= educationLevel)) +
   geom_boxplot() +
   stat_summary(geom = "point",
@@ -272,7 +351,7 @@ p1 <- ggplot(data=Merged_table_filtered,
   theme(axis.title.y= element_text(angle=90), axis.ticks.x= element_blank(),
         axis.line= element_line(color= 'grey'))
 
-p2 <- ggplot(data=Merged_table_filtered, 
+p7 <- ggplot(data=Merged_table_filtered, 
        aes(y = Food, x= educationLevel)) +
   geom_boxplot() +
   stat_summary(geom = "point",
@@ -285,7 +364,7 @@ p2 <- ggplot(data=Merged_table_filtered,
   theme(axis.title.y= element_text(angle=90), axis.ticks.x= element_blank(),
         axis.line= element_line(color= 'grey'))
 
-p3 <- ggplot(data=Merged_table_filtered, 
+p8 <- ggplot(data=Merged_table_filtered, 
        aes(y = AdjustedShelter, x= educationLevel)) +
   geom_boxplot() +
   stat_summary(geom = "point",
@@ -298,7 +377,7 @@ p3 <- ggplot(data=Merged_table_filtered,
   theme(axis.title.y= element_text(angle=90), axis.ticks.x= element_blank(),
         axis.line= element_line(color= 'grey'))
 
-p4 <- ggplot(data=Merged_table_filtered, 
+p9 <- ggplot(data=Merged_table_filtered, 
        aes(y = Wage, x= educationLevel)) +
   geom_boxplot() +
   stat_summary(geom = "point",
@@ -310,11 +389,23 @@ p4 <- ggplot(data=Merged_table_filtered,
        title = "Distribution of Wage by Educational Level") +
   theme(axis.title.y= element_text(angle=90), axis.ticks.x= element_blank(),
         axis.line= element_line(color= 'grey'))
+
+(p6/p7)|(p8/p9)
 ```
 
-```{r}
-(p1/p2)|(p3/p4)
-```
+From the boxplots above, we can observe
+
+1.   Recreational spending is about the same across all educational levels.
+
+2.  Housing spending is lower for Low and High School or Colleague graduates. Bachelors and Graduates spend similarly.
+
+3.  Food expense have a wide disparity across educational groups for their mean and median values. For people of low education level, the upper quartile is much lower than the remaining groups
+
+4.  Graduates have much higher average and median higher wage than the rest of the groups, followed by Bachelors. Low and High School or Colleague graduates have much lower wages.
+
+## Interactive Visualization
+
+Below interactive graphs, we can explore how each spending and wage are correlated with joviality scores by educational levels.
 
 ```{r}
 plot_ly(data = Merged_table_filtered, 
@@ -395,3 +486,5 @@ ggplot(data=Merged_table_filtered,
   theme(axis.title.y= element_text(angle=0), axis.ticks.x= element_blank(),
         axis.line= element_line(color= 'grey'))
 ```
+
+# Recommendation
