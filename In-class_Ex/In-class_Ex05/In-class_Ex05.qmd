@@ -5,28 +5,39 @@ execute:
   echo: true
   warning: false
 author: "Fangxian"
-date: "13 May 2023"
+date: "6 May 2023"
 date-modified: "`r Sys.Date()`"
 ---
 
 # Getting Started
 
 ```{r}
-pacman::p_load(jsonlite, tidygraph, ggraph, visNetwork, tidyverse)
+pacman::p_load(igraph, tidygraph, ggraph, 
+               visNetwork, lubridate, clock,
+               tidyverse, graphlayouts)
 ```
 
-Below codes are for the project
+# Data Preparation
+
+## Importing Network Data
 
 ```{r}
-MC1 <- jsonlite::fromJSON("data/MC1.json")
+GAStech_nodes <- read_csv("data/GAStech_email_node.csv")
+GAStech_edges <- read_csv("data/GAStech_email_edge-v2.csv")
 ```
 
-```{r}
-MC1_nodes <- as_tibble(MC1$nodes) %>%
-  select(id,type,country)
-```
+## Review the imported data
 
 ```{r}
-MC1_edges <- as_tibble(MC1$links) %>%
-  select(source, target, type, weight, key)
+glimpse(GAStech_edges)
+```
+
+## Wrangling time
+
+```{r}
+GAStech_edges <- GAStech_edges %>%
+  mutate(SendDate = dmy(SentDate)) %>%
+  mutate(Weekday = wday(SentDate,
+                        label = TRUE,
+                        abbr = FALSE))
 ```

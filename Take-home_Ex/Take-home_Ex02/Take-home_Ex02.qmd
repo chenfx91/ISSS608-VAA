@@ -1,0 +1,177 @@
+---
+title: "Take Home Exercise 2"
+subtitle: fish
+format: 
+  html: 
+    code-fold: true
+    code-summary: "Show the code"
+author: "Fangxian"
+execute: 
+  eval: true
+  warning: false
+---
+
+```{r}
+pacman::p_load(jsonlite, tidygraph, ggraph, visNetwork, tidyverse, lubridate, ggplot2, gifski, gapminder,plotly, gganimate)
+```
+
+Importing Data
+
+```{r}
+MC2 <- jsonlite::fromJSON("data/mc2_challenge_graph.json")
+carp <- jsonlite::fromJSON("data/bundles/carp.json")
+catfish <- jsonlite::fromJSON("data/bundles/carp.json")
+chub_mackerel <- jsonlite::fromJSON("data/bundles/chub_mackerel.json")
+cod2 <- jsonlite::fromJSON("data/bundles/cod2.json")
+herring <- jsonlite::fromJSON("data/bundles/herring.json")
+lichen <- jsonlite::fromJSON("data/bundles/lichen.json")
+mackerel <- jsonlite::fromJSON("data/bundles/mackerel.json")
+pollock <- jsonlite::fromJSON("data/bundles/pollock.json")
+salmon_wgl <- jsonlite::fromJSON("data/bundles/salmon_wgl.json")
+salmon <- jsonlite::fromJSON("data/bundles/salmon.json")
+shark <- jsonlite::fromJSON("data/bundles/shark.json")
+tuna <- jsonlite::fromJSON("data/bundles/tuna.json")
+```
+
+```{r}
+glimpse(MC2)
+```
+
+```{r}
+MC2_nodes <- as_tibble(MC2$nodes) %>%
+  select(id,shpcountry,rcvcountry)
+
+glimpse(MC2_nodes)
+
+any(is.na(MC2_nodes))
+
+MC2_nodes_cleaned <- na.omit(MC2_nodes)
+
+any(is.na(MC2_nodes_cleaned))
+```
+
+```{r}
+MC2_edges <- as_tibble(MC2$links) %>%
+  mutate(
+    Date = as.Date(arrivaldate),
+    Month_Yr = format(Date, "%Y-%m"),
+    Year = year(Date)) %>%
+  select(source, target, Date, Month_Yr, Year, hscode, valueofgoods_omu, 
+         volumeteu, weightkg, valueofgoodsusd) %>% 
+  distinct()
+
+glimpse(MC2_edges)
+```
+
+Checking on hscode that is related to fish and its products.
+
+```{r}
+distinct_hscode <- unique(MC2_edges$hscode)
+filtered_hscode <- distinct_hscode[grepl("^30[1-8]|^160[4-5]|^2301", distinct_hscode)]
+
+top_3_hscode <- MC2_edges %>%
+  count(hscode) %>%
+  arrange(desc(n)) %>%
+  head(3) %>%
+  pull(hscode)
+
+top_3_hscode
+```
+
+```{r}
+distinct_year <- unique(MC2_edges$Month_Yr)
+distinct_year
+```
+
+Want to know the hscode with highest frequency.
+
+```{r}
+filtered_MC2_edges <- MC2_edges[MC2_edges$hscode %in% filtered_hscode, ]
+
+MC2_edges_aggregated_306170 <- filtered_MC2_edges %>%
+  filter(hscode == "306170")%>%
+  group_by(source, target, hscode, Month_Yr, Year) %>%
+    summarise(weights = n()) %>%
+  filter(source!=target) %>%
+  filter(weights > 10) %>%
+  ungroup()
+
+glimpse(MC2_edges_aggregated_306170)
+```
+
+Want to understand which period most activities.
+
+```{r}
+ggplot(data = MC2_edges_aggregated_306170, aes(x = Month_Yr, y = weights)) +
+  geom_bar(stat = "identity")+
+  ggtitle("Temporal Evolution of Weights")  +
+    facet_wrap(~Year, ncol =1)
+```
+
+```{r}
+id1 <- MC2_edges_aggregated_306170 %>%
+  select(source) %>%
+  rename(id = source)
+id2 <- MC2_edges_aggregated_306170 %>%
+  select(target) %>%
+  rename(id = target)
+MC2_nodes_extracted_306170 <- rbind(id1, id2) %>%
+  distinct()
+```
+
+```{r}
+# Check if the graph is connected
+mc2_graph_306170 <- tbl_graph(nodes = MC2_nodes_extracted_306170,
+                       edges = MC2_edges_aggregated_306170,
+                       directed = TRUE)
+
+```
+
+```{r}
+ggraph(mc2_graph_306170,
+       layout = "fr") +
+  geom_edge_link(aes()) +
+  geom_node_point(aes()) +
+  theme_graph()
+
+library(igraph)
+#Identify nodes with little links
+isolated_nodes <- V(mc2_graph_306170)[degree(mc2_graph_306170) <= 8 ]
+
+# Remove isolated nodes
+mc2_graph_306170 <- delete.vertices(mc2_graph_306170, isolated_nodes)
+
+ggraph(mc2_graph_306170,
+       layout = "fr") +
+  geom_edge_link(aes()) +
+  geom_node_point(aes()) +
+  theme_graph()
+```
+
+```{r}
+mc2_graph_306170 <- mc2_graph_306170%>%
+  as_tbl_graph()
+               
+```
+
+```{r}
+edges_df <- mc2_graph_306170  %>%
+  activate(edges) %>%
+  as_tibble()
+
+nodes_df <- mc2_graph_306170 %>%
+  activate(nodes) %>%
+  as.tibble() %>%
+  rename(label = id) %>%
+  mutate(id=row_number()) %>%
+  select(id, label)
+```
+
+```{r}
+visNetwork(nodes_df,
+           edges_df) %>%
+  visIgraphLayout(layout = "layout_with_fr") %>%
+  visEdges(arrows = "to", 
+           smooth = list(enabled = TRUE, 
+                         type = "curvedCW"))
+```

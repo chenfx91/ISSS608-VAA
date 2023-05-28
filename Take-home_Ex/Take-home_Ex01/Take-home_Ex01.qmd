@@ -9,15 +9,13 @@ author: "Fangxian"
 execute: 
   eval: true
   warning: false
-date: "14 May 2023"
-date-modified: "`r Sys.Date()`"
 ---
 
-# Background and Task
+# Task
 
 City of Engagement, with a total population of 50,000, is a small city located at Country of Nowhere. The city serves as a service centre of an agriculture region surrounding the city. The main agriculture of the region is fruit farms and vineyards. The local council of the city is in the process of preparing the Local Plan 2023. A sample survey of 1000 representative residents had been conducted to collect data related to their household demographic and spending patterns, among other things. The city aims to use the data to assist with their major community revitalization efforts, including how to allocate a very large city renewal grant they have recently received.
 
-The following analysis on the sample survey to reveal the demographic and financial characteristics of the city of Engagement by using appropriate **static and interactive statistical graphics** methods. This analysis will be showing user-friendly and interactive solution that helps city managers and planners to explore the complex data in an engaging way and reveal hidden patterns.
+The following analysis on the sample survey to reveal the demographic and financial characteristics of the city of Engagement byusing appropriate **static and interactive statistical graphics** methods. This analysis will be showing user-friendly and interactive solution that helps city managers and planners to explore the complex data in an engaging way and reveal hidden patterns.
 
 # Data Preparation
 
@@ -118,11 +116,9 @@ Fin_summ$Food <- abs(Fin_summ$Food)
 Fin_summ$Recreation <- abs(Fin_summ$Recreation)
 Fin_summ$AdjustedShelter <- abs(Fin_summ$AdjustedShelter)
 Fin_summ$TotalExpense <- abs(Fin_summ$TotalExpense)
-
-
 ```
 
-Join the two tables and remove the irrelevant columns for analysis and visualization later.
+Join the two tables and remove the irrelevant columns for analysis and visualization later and check for any missing values.
 
 ```{r}
 Fin_byparticipant <- Fin_summ %>%
@@ -140,16 +136,10 @@ Fin_byparticipant <- Fin_summ %>%
 Merged_table <- Fin_byparticipant %>%
   inner_join(Participants, by = "participantId")
 
-```
-
-Check for any missing values.
-
-```{r}
-#| echo: TRUE
 any(is.na(Merged_table))
 ```
 
-Summary of the statistics of the merged_table
+Summary of the statistics of the merged_table.
 
 ```{r}
 psych::describe(Merged_table)
@@ -198,13 +188,14 @@ p2 <- ggplot(data=Merged_table_filtered,
     geom_density()
 
 p1+p2
+  
 ```
 
 We can see from the above group that, joviality scores are not normally distributed in this sample.
 
 ## Two-Sample Test
 
-Since joviality is not normally distributed, we use [*ggbetweenstats()*](https://indrajeetpatil.github.io/ggstatsplot/reference/ggbetweenstats.html) to understand if having kids have an impact on people's happiness. Non-parametric test (Mann-Whitney U test) was carried out for the below hyphothesis.
+Since joviality is not normally distributed, we use [*ggbetweenstats()*](https://indrajeetpatil.github.io/ggstatsplot/reference/ggbetweenstats.html) to understand if having kids have an impact on people\'s happiness. Non-parametric test (Mann-Whitney U test) was carried out for the below hyphothesis.
 
 -   H0: There is no difference between average joviality score of people have kids.
 
@@ -222,7 +213,7 @@ ggbetweenstats(
 
 Since, p-value is greater than 0.05, we conclude that there is no difference between between average joviality score of people have kids.
 
-## One-Way ANOVA Test
+## One-Way Anova Test
 
 As other categorical parameters have more than 2 groups, we use One-Way ANOVA test for the following hypothesis.
 
@@ -242,10 +233,9 @@ ggbetweenstats(
   p.adjust.method = "fdr",
   messages = FALSE
 )
-  
 ```
 
-Since, p-value is less than 0.05, we conclude that there is difference among average joviality score of people of different educational levels. We repeat the same test for the other parameters, i.e. household sizes, age groups, and conclude that these 3 parameters did not have significant statistical significance in affecting the citizen's joviality score.
+Since, p-value is less than 0.05, we conclude that there is difference among average joviality score of people of different educational levels. We repeat the same test for the other parameters, i.e. household sizes, age groups, and conclude that these 3 parameters did not have significant statistical significance in affecting the citizen\'s joviality score.
 
 ```{r}
 p3 <- ggbetweenstats(
@@ -308,7 +298,7 @@ ggplot(Merged_table_filtered,
   theme_economist()
 ```
 
-**Insight:**
+**Insights:**
 
 1.  People of Low education level, has lower average joviality score than the rest, its median is also much lower and far from its average point due to a large number of them have low scores as shown by the higher ridge.
 
@@ -323,7 +313,8 @@ Now we want to look at the continuous variables to understand how educational le
 From the Correlogram below, we have a few observations below,
 
 1.  There are a few pairs with high collinearity: TotalSavings-Wage, TotalExpense-AdjustedShelter, TotalExpense-Recreation. Hence, we will only consider Wage, AdjustedShelter and Recreation for the analysis below.
-2.  Joviality Score has linear relationships with Wage received, Recreation, Food and Housing Expenses
+
+2.  Joviality Score has linear relationships with Wage received, Recreation, Food and Housing Expenses.
 
 ```{r}
 ggstatsplot::ggcorrmat(
@@ -395,7 +386,7 @@ p9 <- ggplot(data=Merged_table_filtered,
 
 From the boxplots above, we can observe
 
-1.   Recreational spending is about the same across all educational levels.
+1.  Recreational spending is about the same across all educational levels.
 
 2.  Housing spending is lower for Low and High School or Colleague graduates. Bachelors and Graduates spend similarly.
 
@@ -441,7 +432,7 @@ plot_ly(data = Merged_table_filtered,
         color = ~educationLevel)
 ```
 
-For wage, it is negatively correlated to joviality score (i.e. the more the person earn, the unhappy he gets). This trend is true across all educational levels. However, this is to note that only when wage hits 75k when we look at the total sample population, we start to see more significant amount of people become unhappy; when we filter to see only High School or Low educational level graduates, the wage that make them unhappy is about 50k. This could be interpreted that at different education level, there might be the higher amount of stress and time spent that comes with the higher wage within their educational level.
+For wage, it is negatively correlated to joviality score (i.e. the more the person earn, the unhappy he gets). This trend is true across all educational levels. However, this is to note that only when wage hits 75k when we look at the total sample population, we start to see more significant amount of people become unhappy; when we filter to see only High School or Low educational level graduates, the wage that make them unhappy is about 50k. This could be interpreted that at different education level, there might be the higher amount of stress and time spent that comes with the higher wage within their educational level.
 
 ## Visualizing the uncertainty of point estimates
 
@@ -504,8 +495,10 @@ ggplot(data=Merged_table_filtered,
 
 For the grant allocation, it could be channeled to several areas below,
 
-1.  Set up a grant for upskilling. As people with higher education tend to be happier, the grant could be given proportionally to one's wage. As shown in the interactive graph for wage, the base salary for higher educated people are higher and most of them are evenly distributed on the joviality score, by upskilling the lower educated people, they do not need to work as hard to generate the same amount of wage
+1.  Set up a grant for upskilling. As people with higher education tend to be happier, the grant could be given proportionally to one\'s wage. As shown in the interactive graph for wage, the base salary for higher educated people are higher and most of them are evenly distributed on the joviality score, by upskilling the lower educated people, they do not need to work as hard to generate the same amount of wage
+
 2.  Give out food vouchers. As we see how a step up to food spending could bring happiness to the people, the planning community could give the food voucher for citizens to fulfill their daily necessary meals while they are able to use their current budget to enjoy better food.
+
 3.  Build a better recreational centre. As recreational spend seems to have the strongest correlation with happiness of the people. The planning community can consider to improve current facilities or build more for people to enjoy
 
 Other efforts to be consider,
@@ -514,4 +507,4 @@ Other efforts to be consider,
 
 # Acknowledgement
 
-Most of the codes and concepts that this analysis has adapted were from Prof Kam's [Lesson Plans](https://r4va.netlify.app/). The portion on uncertainty of point estimates has referred to our senior Michael Djohan's [take-home exercise 3](https://isss608-michaeldj.netlify.app/take-home_ex/take-home_ex03/take-home_ex03#visualising-the-uncertainty-of-point-estimates).
+Most of the codes and concepts that this analysis has adapted were from Prof Kam\'s [Lesson Plans](https://r4va.netlify.app/). The portion on uncertainty of point estimates has referred to our senior Michael Djohan\'s [take-home exercise 3](https://isss608-michaeldj.netlify.app/take-home_ex/take-home_ex03/take-home_ex03#visualising-the-uncertainty-of-point-estimates).
