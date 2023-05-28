@@ -9,18 +9,21 @@ author: "Fangxian"
 execute: 
   eval: true
   warning: false
+date: "4 June 2023"
+date-modified: "`r Sys.Date()`"
 ---
 
 ```{r}
-pacman::p_load(jsonlite, tidygraph, ggraph, visNetwork, tidyverse, lubridate, ggplot2, ggthemes, gifski, gapminder,plotly, gganimate)
+pacman::p_load(jsonlite, tidygraph, ggraph, visNetwork, tidyverse, lubridate, ggplot2, ggthemes, gifski, gapminder,plotly, gganimate,seriation, dendextend, heatmaply)
 ```
 
 Importing Data
 
 ```{r}
 MC2 <- jsonlite::fromJSON("data/mc2_challenge_graph.json")
-carp <- jsonlite::fromJSON("data/bundles/carp.json")
 catfish <- jsonlite::fromJSON("data/bundles/carp.json")
+tuna <- jsonlite::fromJSON("data/bundles/tuna.json")
+carp <- jsonlite::fromJSON("data/bundles/carp.json")
 chub_mackerel <- jsonlite::fromJSON("data/bundles/chub_mackerel.json")
 cod2 <- jsonlite::fromJSON("data/bundles/cod2.json")
 herring <- jsonlite::fromJSON("data/bundles/herring.json")
@@ -30,7 +33,6 @@ pollock <- jsonlite::fromJSON("data/bundles/pollock.json")
 salmon_wgl <- jsonlite::fromJSON("data/bundles/salmon_wgl.json")
 salmon <- jsonlite::fromJSON("data/bundles/salmon.json")
 shark <- jsonlite::fromJSON("data/bundles/shark.json")
-tuna <- jsonlite::fromJSON("data/bundles/tuna.json")
 ```
 
 ```{r}
@@ -56,8 +58,7 @@ MC2_edges <- as_tibble(MC2$links) %>%
     Date = as.Date(arrivaldate),
     Month_Yr = format(Date, "%Y-%m"),
     Year = year(Date)) %>%
-  select(source, target, Date, Month_Yr, Year, hscode, valueofgoods_omu, 
-         volumeteu, weightkg, valueofgoodsusd) %>% 
+  select(source, target, Date, Month_Yr, Year, hscode) %>% 
   distinct()
 
 glimpse(MC2_edges)
@@ -67,9 +68,11 @@ Checking on hscode that is related to fish and its products.
 
 ```{r}
 distinct_hscode <- unique(MC2_edges$hscode)
-filtered_hscode <- distinct_hscode[grepl("^30[1-8]|^160[4-5]|^2301", distinct_hscode)]
+filtered_hscode <- distinct_hscode[grepl("^30[1-8]|^160[4-5]|^2301|^1212|^1302|^1504|^151610|^151790",distinct_hscode)]
 
-top_3_hscode <- MC2_edges %>%
+filtered_MC2_edges <- MC2_edges[MC2_edges$hscode %in% filtered_hscode, ]
+
+top_3_hscode <- filtered_MC2_edges %>%
   count(hscode) %>%
   arrange(desc(n)) %>%
   head(3) %>%
@@ -78,16 +81,23 @@ top_3_hscode <- MC2_edges %>%
 top_3_hscode
 ```
 
+306170: Other shirmps and prawns
+
+304620: Catfish
+
+160414: Tunas, Skipjack And Bonito (sarda Spp), Prepared Or Preserved, Whole Or In Pieces, But Not Minced
+
 ```{r}
-distinct_year <- unique(MC2_edges$Month_Yr)
+distinct_year <- unique(filtered_MC2_edges$Year)
 distinct_year
+
+distinct_source <- unique(filtered_MC2_edges$source)
+distinct_source
 ```
 
 Want to know the hscode with highest frequency.
 
 ```{r}
-filtered_MC2_edges <- MC2_edges[MC2_edges$hscode %in% filtered_hscode, ]
-
 MC2_edges_aggregated_306170 <- filtered_MC2_edges %>%
   filter(hscode == "306170")%>%
   group_by(source, target, hscode, Month_Yr, Year) %>%
@@ -107,8 +117,7 @@ ggplot(data = MC2_edges_aggregated_306170, aes(x = Month_Yr, y = weights)) +
   ggtitle("Temporal Evolution of Weights")  +
   theme(axis.title.y= element_text(angle=90), axis.ticks.x= element_blank(),
         axis.line= element_line(color= 'grey'),
-        axis.text.x = element_text(angle = 90, hjust = 1)) +
-    facet_wrap(~Year, ncol =1)
+        axis.text.x = element_text(angle = 90, hjust = 1))
 ```
 
 ```{r}
@@ -123,7 +132,6 @@ MC2_nodes_extracted_306170 <- rbind(id1, id2) %>%
 ```
 
 ```{r}
-# Check if the graph is connected
 mc2_graph_306170 <- tbl_graph(nodes = MC2_nodes_extracted_306170,
                        edges = MC2_edges_aggregated_306170,
                        directed = TRUE)
@@ -131,6 +139,7 @@ mc2_graph_306170 <- tbl_graph(nodes = MC2_nodes_extracted_306170,
 ```
 
 ```{r}
+set.seed (1234)
 ggraph(mc2_graph_306170,
        layout = "fr") +
   geom_edge_link(aes()) +
@@ -154,7 +163,41 @@ ggraph(mc2_graph_306170,
 ```{r}
 mc2_graph_306170 <- mc2_graph_306170%>%
   as_tbl_graph()
-               
+```
+
+```{r}
+quantile_graph_306170 <- quantile(eigen_centrality(mc2_graph_306170)$vector,
+         probs = seq(0, 1, 1/10)
+         )
+V(mc2_graph_306170)$size = eigen_centrality(mc2_graph_306170)$vector
+
+mc2_graph_306170_agg <- delete_vertices(mc2_graph_306170, V(mc2_graph_306170)[size < quantile_graph_306170[10]])
+
+
+layout1 <- layout_with_fr(mc2_graph_306170_agg)
+
+quantile_graph_306170_agg <- quantile(V(mc2_graph_306170_agg)$size, #identify top 10% of the new vertices
+         probs = seq(0, 1, 1/10)
+         )
+
+V(mc2_graph_306170_agg)$color <- ifelse (V(mc2_graph_306170_agg)$size > quantile_graph_306170_agg[10], "darkgoldenrod3", "azure3") #color yellow if vertices is top 10%
+E(mc2_graph_306170_agg)$color <- "grey"
+V(mc2_graph_306170_agg)$size <- V(mc2_graph_306170_agg)$size/0.065 
+#Increase the size of nodes based on their centrality score, only those with high score will be visible
+
+plot(mc2_graph_306170_agg, edge.arrow.size=0.25,edge.arrow.mode = "-", vertex.label = V(mc2_graph_306170_agg)$label, vertex.label.cex = 0.65, vertex.label.font = 2, main = "Which id?" ) 
+
+```
+
+```{r}
+vertex_attr(mc2_graph_306170_agg, index = V(mc2_graph_306170_agg)$size > quantile_graph_306170_agg[10])
+```
+
+```{r}
+
+
+mc2_graph_306170_bet<-mc2_graph_306170%>%
+  mutate(betweenness=centrality_betweenness())
 ```
 
 ```{r}
