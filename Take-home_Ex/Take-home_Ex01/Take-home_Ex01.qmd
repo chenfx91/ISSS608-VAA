@@ -195,7 +195,7 @@ We can see from the above group that, joviality scores are not normally distribu
 
 ## Two-Sample Test
 
-Since joviality is not normally distributed, we use [*ggbetweenstats()*](https://indrajeetpatil.github.io/ggstatsplot/reference/ggbetweenstats.html) to understand if having kids have an impact on people\'s happiness. Non-parametric test (Mann-Whitney U test) was carried out for the below hyphothesis.
+Since joviality is not normally distributed, we use [*ggbetweenstats()*](https://indrajeetpatil.github.io/ggstatsplot/reference/ggbetweenstats.html) to understand if having kids have an impact on people's happiness. Non-parametric test (Mann-Whitney U test) was carried out for the below hyphothesis.
 
 -   H0: There is no difference between average joviality score of people have kids.
 
@@ -235,7 +235,7 @@ ggbetweenstats(
 )
 ```
 
-Since, p-value is less than 0.05, we conclude that there is difference among average joviality score of people of different educational levels. We repeat the same test for the other parameters, i.e. household sizes, age groups, and conclude that these 3 parameters did not have significant statistical significance in affecting the citizen\'s joviality score.
+Since, p-value is less than 0.05, we conclude that there is difference among average joviality score of people of different educational levels. We repeat the same test for the other parameters, i.e. household sizes, age groups, and conclude that these 3 parameters did not have significant statistical significance in affecting the citizen's joviality score.
 
 ```{r}
 p3 <- ggbetweenstats(
@@ -495,7 +495,7 @@ ggplot(data=Merged_table_filtered,
 
 For the grant allocation, it could be channeled to several areas below,
 
-1.  Set up a grant for upskilling. As people with higher education tend to be happier, the grant could be given proportionally to one\'s wage. As shown in the interactive graph for wage, the base salary for higher educated people are higher and most of them are evenly distributed on the joviality score, by upskilling the lower educated people, they do not need to work as hard to generate the same amount of wage
+1.  Set up a grant for upskilling. As people with higher education tend to be happier, the grant could be given proportionally to one's wage. As shown in the interactive graph for wage, the base salary for higher educated people are higher and most of them are evenly distributed on the joviality score, by upskilling the lower educated people, they do not need to work as hard to generate the same amount of wage
 
 2.  Give out food vouchers. As we see how a step up to food spending could bring happiness to the people, the planning community could give the food voucher for citizens to fulfill their daily necessary meals while they are able to use their current budget to enjoy better food.
 
@@ -507,4 +507,4 @@ Other efforts to be consider,
 
 # Acknowledgement
 
-Most of the codes and concepts that this analysis has adapted were from Prof Kam\'s [Lesson Plans](https://r4va.netlify.app/). The portion on uncertainty of point estimates has referred to our senior Michael Djohan\'s [take-home exercise 3](https://isss608-michaeldj.netlify.app/take-home_ex/take-home_ex03/take-home_ex03#visualising-the-uncertainty-of-point-estimates).
+Most of the codes and concepts that this analysis has adapted were from Prof Kam's [Lesson Plans](https://r4va.netlify.app/). The portion on uncertainty of point estimates has referred to our senior Michael Djohan's [take-home exercise 3](https://isss608-michaeldj.netlify.app/take-home_ex/take-home_ex03/take-home_ex03#visualising-the-uncertainty-of-point-estimates).

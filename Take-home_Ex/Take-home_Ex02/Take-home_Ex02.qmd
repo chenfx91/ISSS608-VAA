@@ -12,7 +12,7 @@ execute:
 ---
 
 ```{r}
-pacman::p_load(jsonlite, tidygraph, ggraph, visNetwork, tidyverse, lubridate, ggplot2, gifski, gapminder,plotly, gganimate)
+pacman::p_load(jsonlite, tidygraph, ggraph, visNetwork, tidyverse, lubridate, ggplot2, ggthemes, gifski, gapminder,plotly, gganimate)
 ```
 
 Importing Data
@@ -105,6 +105,9 @@ Want to understand which period most activities.
 ggplot(data = MC2_edges_aggregated_306170, aes(x = Month_Yr, y = weights)) +
   geom_bar(stat = "identity")+
   ggtitle("Temporal Evolution of Weights")  +
+  theme(axis.title.y= element_text(angle=90), axis.ticks.x= element_blank(),
+        axis.line= element_line(color= 'grey'),
+        axis.text.x = element_text(angle = 90, hjust = 1)) +
     facet_wrap(~Year, ncol =1)
 ```
 
