@@ -13,31 +13,39 @@ date: "4 June 2023"
 date-modified: "`r Sys.Date()`"
 ---
 
+# Task
+
+Using the data provide by the VAST challenge, we are looking into the [Mini-Challenge 2](https://vast-challenge.github.io/2023/MC2.html) (MC2) to identify compaines possibly engaged in illegal, unreported, and unregulated (IUU) fishing.
+
+# Data Preparation
+
+## Load Packages
+
+The code chunk below uses `pacman::p_load()` to check if packages are installed. If they are, they will be launched into R. The packages installed are
+
+-   `tidyverse`: A collection of core packages designed for data science, used extensively for data preparation and wrangling.
+
+-   `ggplot2`: Used for plotting different types of graphs.
+
+-   `ggthemes`: Provide additional themes for `ggplot2` .
+
 ```{r}
-pacman::p_load(jsonlite, tidygraph, ggraph, visNetwork, tidyverse, lubridate, ggplot2, ggthemes, gifski, gapminder,plotly, gganimate,seriation, dendextend, heatmaply)
+pacman::p_load(jsonlite, tidygraph, ggraph, visNetwork, tidyverse, lubridate, ggplot2, ggthemes, igraph)
 ```
 
-Importing Data
+## Data Importing and wraggling
+
+Import the main MC2 data and some buddle data.
 
 ```{r}
 MC2 <- jsonlite::fromJSON("data/mc2_challenge_graph.json")
 catfish <- jsonlite::fromJSON("data/bundles/carp.json")
 tuna <- jsonlite::fromJSON("data/bundles/tuna.json")
-carp <- jsonlite::fromJSON("data/bundles/carp.json")
-chub_mackerel <- jsonlite::fromJSON("data/bundles/chub_mackerel.json")
-cod2 <- jsonlite::fromJSON("data/bundles/cod2.json")
-herring <- jsonlite::fromJSON("data/bundles/herring.json")
-lichen <- jsonlite::fromJSON("data/bundles/lichen.json")
-mackerel <- jsonlite::fromJSON("data/bundles/mackerel.json")
-pollock <- jsonlite::fromJSON("data/bundles/pollock.json")
-salmon_wgl <- jsonlite::fromJSON("data/bundles/salmon_wgl.json")
-salmon <- jsonlite::fromJSON("data/bundles/salmon.json")
-shark <- jsonlite::fromJSON("data/bundles/shark.json")
-```
 
-```{r}
 glimpse(MC2)
 ```
+
+Run the below code chunk to preparing the node data. Upon looking into the node data, there are many missing data, to reduce the noise, we remove the missing data from here for further analysis.
 
 ```{r}
 MC2_nodes <- as_tibble(MC2$nodes) %>%
@@ -52,6 +60,8 @@ MC2_nodes_cleaned <- na.omit(MC2_nodes)
 any(is.na(MC2_nodes_cleaned))
 ```
 
+Run the below code chunk to prepare trhe edge data. *Month_Yr* and *Year* were extracted for the temporal analysis in the later part.
+
 ```{r}
 MC2_edges <- as_tibble(MC2$links) %>%
   mutate(
@@ -60,11 +70,17 @@ MC2_edges <- as_tibble(MC2$links) %>%
     Year = year(Date)) %>%
   select(source, target, Date, Month_Yr, Year, hscode) %>% 
   distinct()
-
-glimpse(MC2_edges)
 ```
 
-Checking on hscode that is related to fish and its products.
+Hscode is the Harmonized System with standardized numerical method of classifying traded products. Since we are interested in the fish related products, hscode that is related to fish and its products are shown in the table below.
+
+[![](data/fishhscode.PNG){fig-align="center"}](https://www.fao.org/3/cb3813en/cb3813en.pdf)
+
+Code chunk is run to filter all the hscode with fish related trades and identify the top 3 most traded fish products, namely,
+
+1.  306170: Other shirmps and prawns
+2.  304620: Catfish
+3.  160414: Tunas, Skipjack And Bonito (sarda Spp), Prepared Or Preserved, Whole Or In Pieces, But Not Minced
 
 ```{r}
 distinct_hscode <- unique(MC2_edges$hscode)
@@ -80,22 +96,6 @@ top_3_hscode <- filtered_MC2_edges %>%
 
 top_3_hscode
 ```
-
-306170: Other shirmps and prawns
-
-304620: Catfish
-
-160414: Tunas, Skipjack And Bonito (sarda Spp), Prepared Or Preserved, Whole Or In Pieces, But Not Minced
-
-```{r}
-distinct_year <- unique(filtered_MC2_edges$Year)
-distinct_year
-
-distinct_source <- unique(filtered_MC2_edges$source)
-distinct_source
-```
-
-Want to know the hscode with highest frequency.
 
 ```{r}
 MC2_edges_aggregated_306170 <- filtered_MC2_edges %>%
@@ -145,19 +145,6 @@ ggraph(mc2_graph_306170,
   geom_edge_link(aes()) +
   geom_node_point(aes()) +
   theme_graph()
-
-library(igraph)
-#Identify nodes with little links
-isolated_nodes <- V(mc2_graph_306170)[degree(mc2_graph_306170) <= 8 ]
-
-# Remove isolated nodes
-mc2_graph_306170 <- delete.vertices(mc2_graph_306170, isolated_nodes)
-
-ggraph(mc2_graph_306170,
-       layout = "fr") +
-  geom_edge_link(aes()) +
-  geom_node_point(aes()) +
-  theme_graph()
 ```
 
 ```{r}
@@ -167,20 +154,20 @@ mc2_graph_306170 <- mc2_graph_306170%>%
 
 ```{r}
 quantile_graph_306170 <- quantile(eigen_centrality(mc2_graph_306170)$vector,
-         probs = seq(0, 1, 1/10)
+         probs = seq(0, 1, 1/5)
          )
 V(mc2_graph_306170)$size = eigen_centrality(mc2_graph_306170)$vector
 
-mc2_graph_306170_agg <- delete_vertices(mc2_graph_306170, V(mc2_graph_306170)[size < quantile_graph_306170[10]])
+mc2_graph_306170_agg <- delete_vertices(mc2_graph_306170, V(mc2_graph_306170)[size < quantile_graph_306170[5]])
 
 
 layout1 <- layout_with_fr(mc2_graph_306170_agg)
 
-quantile_graph_306170_agg <- quantile(V(mc2_graph_306170_agg)$size, #identify top 10% of the new vertices
-         probs = seq(0, 1, 1/10)
+quantile_graph_306170_agg <- quantile(V(mc2_graph_306170_agg)$size, #identify top 20% of the new vertices
+         probs = seq(0, 1, 1/5)
          )
 
-V(mc2_graph_306170_agg)$color <- ifelse (V(mc2_graph_306170_agg)$size > quantile_graph_306170_agg[10], "darkgoldenrod3", "azure3") #color yellow if vertices is top 10%
+V(mc2_graph_306170_agg)$color <- ifelse (V(mc2_graph_306170_agg)$size > quantile_graph_306170_agg[5], "darkgoldenrod3", "azure3") #color yellow if vertices is top 20%
 E(mc2_graph_306170_agg)$color <- "grey"
 V(mc2_graph_306170_agg)$size <- V(mc2_graph_306170_agg)$size/0.065 
 #Increase the size of nodes based on their centrality score, only those with high score will be visible
@@ -190,7 +177,7 @@ plot(mc2_graph_306170_agg, edge.arrow.size=0.25,edge.arrow.mode = "-", vertex.la
 ```
 
 ```{r}
-vertex_attr(mc2_graph_306170_agg, index = V(mc2_graph_306170_agg)$size > quantile_graph_306170_agg[10])
+vertex_attr(mc2_graph_306170_agg, index = V(mc2_graph_306170_agg)$size > quantile_graph_306170_agg[5])
 ```
 
 ```{r}
@@ -205,6 +192,18 @@ g <- mc2_graph_306170_agg %>%
   scale_edge_width(range = c(0.1, 5)) +
   geom_node_point(aes(colour = id,
             size=betweenness_centrality))
+g + theme_graph()
+```
+
+```{r}
+g <- mc2_graph_306170 %>%
+  mutate(community = as.factor(group_edge_betweenness(weights = weights, directed = TRUE))) %>%
+  ggraph(layout = "fr") + 
+  geom_edge_link(aes(width=weights), 
+                 alpha=0.2) +
+  scale_edge_width(range = c(0.1, 5)) +
+  geom_node_point(aes(colour = community))  
+
 g + theme_graph()
 ```
 
