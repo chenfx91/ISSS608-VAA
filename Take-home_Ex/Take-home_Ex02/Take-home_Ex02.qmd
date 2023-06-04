@@ -150,7 +150,9 @@ mc2_graph <- tbl_graph(nodes = MC2_nodes_extracted,
                        directed = TRUE)
 ```
 
-Many
+For the graphs below, the nodes are the fishing companies and the edges (links) are amount of times they are interacting with other nodes.
+
+As mentioned in the introduction, transshipment could be a way for ships to launder the IUU fishes, we plot the below graph, by filtering the nodes that has high in-degree. Nodes with high in-degree here means, it received a lot of shirmps/catfish/tuna from other ships.
 
 ```{r}
 set.seed (1234)
@@ -158,11 +160,16 @@ V(mc2_graph)$degree <- degree(mc2_graph, mode = "in")
 
 ggraph(mc2_graph, 'igraph', algorithm = 'fr') + 
   geom_edge_link0(aes(width = weights), edge_alpha = 0.1) + 
-  geom_node_point(aes(size = degree), colour = 'steelblue') + 
-  geom_node_text(aes(label = id, filter = degree > 25), color = 'black', 
-                 size = 3, repel = TRUE) + 
+  geom_node_point(aes(size = degree, color = degree > 20)) +
+  scale_color_manual(values = c("steelblue", "red"), 
+                     breaks = c(FALSE, TRUE), 
+                     labels = c("Degree <= 20", "Degree > 20")) +
+  geom_node_text(aes(label = id, filter = degree > 20), color = 'black', 
+                 size = 3, repel = TRUE) +
   ggforce::theme_no_axes()
 ```
+
+We are also interested to know the high out-degree nodes, and later in the interactive nodes, we can example if any of these high out-degree nodes actually supplies to the above high in-dgree nodes.
 
 ```{r}
 set.seed (1234)
@@ -170,11 +177,13 @@ V(mc2_graph)$degree <- degree(mc2_graph, mode = "out")
 
 ggraph(mc2_graph, 'igraph', algorithm = 'fr') + 
   geom_edge_link0(aes(width = weights), edge_alpha = 0.1) + 
-  geom_node_point(aes(size = degree), colour = 'steelblue') + 
+  geom_node_point(aes(size = degree, color = degree > 20)) +
+  scale_color_manual(values = c("steelblue", "red"), 
+                     breaks = c(FALSE, TRUE), 
+                     labels = c("Degree <= 20", "Degree > 20")) +
   geom_node_text(aes(label = id, filter = degree > 20), color = 'black', 
-                 size = 3, repel = TRUE) + 
+                 size = 3, repel = TRUE) +
   ggforce::theme_no_axes()
-
 ```
 
 ```{r}
@@ -184,14 +193,14 @@ MC2_edges_aggregated$Month_Yr <- as.Date(paste0(MC2_edges_aggregated$Month_Yr, "
 top_weights <- MC2_edges_aggregated%>%
   filter(weights >= 15)
 
- ggplot(top_weights, aes(x=Month_Yr, y=source, fill=weights))+
+ ggplot(top_weights, aes(x=Month_Yr, y=target, fill=weights))+
   geom_tile(colour="White", show.legend=FALSE)+
   theme_classic()+
   scale_fill_distiller(palette="Spectral")
 ```
 
 ```{r}
- ggplot(top_weights, aes(x=Month_Yr, y=target, fill=weights))+
+ ggplot(top_weights, aes(x=Month_Yr, y=source, fill=weights))+
   geom_tile(colour="White", show.legend=FALSE)+
   theme_classic()+
   scale_fill_distiller(palette="Spectral")
