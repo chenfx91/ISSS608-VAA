@@ -1,6 +1,6 @@
 ---
 title: "Take Home Exercise 2"
-subtitle: fish
+subtitle: "Uncover illegal, unreported, and unregulated (IUU) fishing activities through visual analytics"
 format: 
   html: 
     code-fold: true
@@ -33,18 +33,30 @@ The code chunk below uses `pacman::p_load()` to check if packages are installe
 
 -   `ggthemes`: Provide additional themes for `ggplot2` .
 
+-   `jsonlite`: Used for loading json data file.
+
+-   `tidygraph`: Used for visualising network graph.
+
+-   `visNetwork`: Used for visualising interactive network graph.
+
+-   `pacthwork`: Used to combine plots.
+
+-   `ggrepel`: ggrepel provides geoms for `ggplot2` to repel overlapping text labels.
+
+-   `ggraph`: extension of `ggplot2`
+
+-   `igraph`: Network Analysis and Visualization.
+
 ```{r}
-pacman::p_load(jsonlite, tidygraph, ggraph, visNetwork, tidyverse, lubridate, ggplot2, ggthemes, igraph, patchwork, ggrepel,heatmaply)
+pacman::p_load(jsonlite, tidygraph, ggraph, visNetwork, tidyverse, lubridate, ggplot2, ggthemes, igraph, patchwork, ggrepel)
 ```
 
 ## Data Importing and wraggling
 
-Import the main MC2 data and some buddle data.
+Import the main MC2 data.
 
 ```{r}
 MC2 <- jsonlite::fromJSON("data/mc2_challenge_graph.json")
-catfish <- jsonlite::fromJSON("data/bundles/carp.json")
-tuna <- jsonlite::fromJSON("data/bundles/tuna.json")
 
 glimpse(MC2)
 ```
@@ -64,7 +76,7 @@ MC2_nodes_cleaned <- na.omit(MC2_nodes)
 any(is.na(MC2_nodes_cleaned))
 ```
 
-Run the below code chunk to prepare trhe edge data. *Month_Yr* and *Year* were extracted for the temporal analysis in the later part.
+Run the below code chunk to prepare edge data. *Month_Yr* and *Year* were extracted for the temporal analysis in the later part.
 
 ```{r}
 MC2_edges <- as_tibble(MC2$links) %>%
@@ -101,34 +113,40 @@ top_3_hscode <- filtered_MC2_edges %>%
 top_3_hscode
 ```
 
+Code chunk below run to filter the edges involve the top 3 appeared hscodes.
+
 ```{r}
-MC2_edges_aggregated_306170 <- filtered_MC2_edges %>%
-  filter(hscode == "306170")%>%
+MC2_edges_aggregated <- filtered_MC2_edges %>%
+  filter(hscode %in% c("306170", "304610", "160414"))%>%
   group_by(source, target, hscode, Month_Yr, Year) %>%
     summarise(weights = n()) %>%
   filter(source!=target) %>%
   filter(weights > 10) %>%
   ungroup()
 
-glimpse(MC2_edges_aggregated_306170)
+glimpse(MC2_edges_aggregated)
 ```
 
+Run the below codes to ensure our nodes data is cleaned and ready to be used for visualization below.
+
 ```{r}
-id1 <- MC2_edges_aggregated_306170 %>%
+id1 <- MC2_edges_aggregated %>%
   select(source) %>%
   rename(id = source)
-id2 <- MC2_edges_aggregated_306170 %>%
+id2 <- MC2_edges_aggregated %>%
   select(target) %>%
   rename(id = target)
-MC2_nodes_extracted_306170 <- rbind(id1, id2) %>%
+MC2_nodes_extracted <- rbind(id1, id2) %>%
   distinct()
 ```
 
 # Data Visualization
 
+Run the below code to activate the graph
+
 ```{r}
-mc2_graph_306170 <- tbl_graph(nodes = MC2_nodes_extracted_306170,
-                       edges = MC2_edges_aggregated_306170,
+mc2_graph <- tbl_graph(nodes = MC2_nodes_extracted,
+                       edges = MC2_edges_aggregated,
                        directed = TRUE)
 ```
 
@@ -136,50 +154,47 @@ Many
 
 ```{r}
 set.seed (1234)
-V(mc2_graph_306170)$degree <- degree(mc2_graph_306170, mode = "in")
+V(mc2_graph)$degree <- degree(mc2_graph, mode = "in")
 
-ggraph(mc2_graph_306170, 'igraph', algorithm = 'fr') + 
+ggraph(mc2_graph, 'igraph', algorithm = 'fr') + 
   geom_edge_link0(aes(width = weights), edge_alpha = 0.1) + 
   geom_node_point(aes(size = degree), colour = 'steelblue') + 
-  geom_node_text(aes(label = id, filter = degree > 60), color = 'black', 
+  geom_node_text(aes(label = id, filter = degree > 25), color = 'black', 
                  size = 3, repel = TRUE) + 
-  theme_graph()
+  ggforce::theme_no_axes()
 ```
 
 ```{r}
 set.seed (1234)
-V(mc2_graph_306170)$degree <- degree(mc2_graph_306170, mode = "out")
+V(mc2_graph)$degree <- degree(mc2_graph, mode = "out")
 
-ggraph(mc2_graph_306170, 'igraph', algorithm = 'fr') + 
+ggraph(mc2_graph, 'igraph', algorithm = 'fr') + 
   geom_edge_link0(aes(width = weights), edge_alpha = 0.1) + 
   geom_node_point(aes(size = degree), colour = 'steelblue') + 
-  geom_node_text(aes(label = id, filter = degree > 40), color = 'black', 
+  geom_node_text(aes(label = id, filter = degree > 20), color = 'black', 
                  size = 3, repel = TRUE) + 
-  theme_graph()
+  ggforce::theme_no_axes()
 
 ```
 
 ```{r}
-MC2_edges_aggregated_306170$Month_Yr <- as.Date(paste0(MC2_edges_aggregated_306170$Month_Yr, "-01"), format = "%Y-%m-%d")
+MC2_edges_aggregated$Month_Yr <- as.Date(paste0(MC2_edges_aggregated$Month_Yr, "-01"), format = "%Y-%m-%d")
 
 
-top_50_weights <- MC2_edges_aggregated_306170 %>%
-  top_n(50, wt = weights)
+top_weights <- MC2_edges_aggregated%>%
+  filter(weights >= 15)
 
- ggplot(top_50_weights, aes(x=Month_Yr, y=source, fill=weights))+
+ ggplot(top_weights, aes(x=Month_Yr, y=source, fill=weights))+
   geom_tile(colour="White", show.legend=FALSE)+
   theme_classic()+
   scale_fill_distiller(palette="Spectral")
-
-
 ```
 
 ```{r}
- ggplot(top_50_weights, aes(x=Month_Yr, y=target, fill=weights))+
+ ggplot(top_weights, aes(x=Month_Yr, y=target, fill=weights))+
   geom_tile(colour="White", show.legend=FALSE)+
   theme_classic()+
   scale_fill_distiller(palette="Spectral")
- 
 ```
 
 Finding the cluster, check if can label the cluster for each node.
@@ -187,11 +202,11 @@ Finding the cluster, check if can label the cluster for each node.
 # Interactive Network Graph
 
 ```{r}
-edges_df <- mc2_graph_306170 %>%
+edges_df <- mc2_graph%>%
   activate(edges) %>%
   as_tibble()
 
-nodes_df <- mc2_graph_306170 %>%
+nodes_df <- mc2_graph %>%
   activate(nodes) %>%
   as.tibble() %>%
   rename(label = id) %>%
