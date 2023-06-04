@@ -19,7 +19,9 @@ Using the data provide by the VAST challenge, we are looking into the [Mini-Chal
 
 When looking into IUU, we need to understand transshipment plays crucial roles in facilitating IUU fishing. Fishing ships will transfer its catch to other ships which would launder the catch to other countries - presumably their won. According to [OCEANS](https://www.oceansinc.earth/transshipment#:~:text=Transshipment%20can%20facilitate%20IUU%20fishing,fish%20to%20be%20%E2%80%9Claundered%E2%80%9D.), as many as 20% of global fishing catch is from IUU sources.
 
-Below, we will use Social Network Analysis (SNA) to understand to observe if we could uncover suspicious IUU activities.
+In the MC2 also mentioned that, when comapnies caught fishing illegally will shut down but will then often start up again under a different name, below we will visualize temporal patterns to identify if there are companies like this.
+
+Below, we will use Social Network Analysis (SNA) and other relevant tools to understand to observe if we could uncover suspicious IUU activities.
 
 # Data Preparation
 
@@ -39,8 +41,6 @@ The code chunk below uses `pacman::p_load()` to check if packages are installe
 
 -   `visNetwork`: Used for visualising interactive network graph.
 
--   `pacthwork`: Used to combine plots.
-
 -   `ggrepel`: ggrepel provides geoms for `ggplot2` to repel overlapping text labels.
 
 -   `ggraph`: extension of `ggplot2`
@@ -48,7 +48,7 @@ The code chunk below uses `pacman::p_load()` to check if packages are installe
 -   `igraph`: Network Analysis and Visualization.
 
 ```{r}
-pacman::p_load(jsonlite, tidygraph, ggraph, visNetwork, tidyverse, lubridate, ggplot2, ggthemes, igraph, patchwork, ggrepel)
+pacman::p_load(jsonlite, tidygraph, ggraph, visNetwork, tidyverse, lubridate, ggplot2, ggthemes, igraph, ggrepel)
 ```
 
 ## Data Importing and wraggling
@@ -154,6 +154,8 @@ For the graphs below, the nodes are the fishing companies and the edges (links) 
 
 As mentioned in the introduction, transshipment could be a way for ships to launder the IUU fishes, we plot the below graph, by filtering the nodes that has high in-degree. Nodes with high in-degree here means, it received a lot of shirmps/catfish/tuna from other ships.
 
+## Plot Network Graph
+
 ```{r}
 set.seed (1234)
 V(mc2_graph)$degree <- degree(mc2_graph, mode = "in")
@@ -186,6 +188,10 @@ ggraph(mc2_graph, 'igraph', algorithm = 'fr') +
   ggforce::theme_no_axes()
 ```
 
+## Plot Temporal Graph
+
+Based on the network graphs above, we realized that weights become significant when its more than 15, hence, below we plot the calendar heatmap for companies have higher activities (weight \>= 15) to understand their trading patterns over time.
+
 ```{r}
 MC2_edges_aggregated$Month_Yr <- as.Date(paste0(MC2_edges_aggregated$Month_Yr, "-01"), format = "%Y-%m-%d")
 
@@ -206,9 +212,22 @@ top_weights <- MC2_edges_aggregated%>%
   scale_fill_distiller(palette="Spectral")
 ```
 
-Finding the cluster, check if can label the cluster for each node.
+## Insights
+
+Based on the network graphs and the heatmaps rom the above two network graph, some companies have high in/out degree but their activties are consistent across the time, hence we would think that those are the legal companies, and I have identified some prominent company pairs in the table below that caught my attention with their abrupt activities in the heatmap.
+
+| High in-degree companies                | High out-degree companies        |
+|---------------------------------|-----------------------------|
+| Yu xian SRL Industrial                  | Kerala Market - Ges.m.b.H. Cargo |
+| Volga River LLC Enterprises             | Estrella de la Costa SRL         |
+| Sea Breeze Corporation Marine sanctuary | Manipur Market Corporation Cargo |
+| Sea Turtle GmbH & Co. KG                | Dutch Eel AB Holdings            |
+
+These companies form the demand-supply pairs, as seemed in the network graphs, and from the calendar heatmap, we can see their activtities match - both will be active in the same period and then disappear after "getting caught". These could be suspicious companies that we should look into more details in the personels involved to see if there are any leads.
 
 # Interactive Network Graph
+
+Below visNetwork() is used for the interactive network graph, so from the above identified companies, we are able to select those companies by the id dropdown to observe the network around them.
 
 ```{r}
 edges_df <- mc2_graph%>%

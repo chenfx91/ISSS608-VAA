@@ -261,7 +261,12 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
   <li><a href="#load-packages" id="toc-load-packages" class="nav-link" data-scroll-target="#load-packages">Load Packages</a></li>
   <li><a href="#data-importing-and-wraggling" id="toc-data-importing-and-wraggling" class="nav-link" data-scroll-target="#data-importing-and-wraggling">Data Importing and wraggling</a></li>
   </ul></li>
-  <li><a href="#data-visualization" id="toc-data-visualization" class="nav-link" data-scroll-target="#data-visualization">Data Visualization</a></li>
+  <li><a href="#data-visualization" id="toc-data-visualization" class="nav-link" data-scroll-target="#data-visualization">Data Visualization</a>
+  <ul class="collapse">
+  <li><a href="#plot-network-graph" id="toc-plot-network-graph" class="nav-link" data-scroll-target="#plot-network-graph">Plot Network Graph</a></li>
+  <li><a href="#plot-temporal-graph" id="toc-plot-temporal-graph" class="nav-link" data-scroll-target="#plot-temporal-graph">Plot Temporal Graph</a></li>
+  <li><a href="#insights" id="toc-insights" class="nav-link" data-scroll-target="#insights">Insights</a></li>
+  </ul></li>
   <li><a href="#interactive-network-graph" id="toc-interactive-network-graph" class="nav-link" data-scroll-target="#interactive-network-graph">Interactive Network Graph</a></li>
   </ul>
 </nav>
@@ -309,7 +314,8 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <h1>Task</h1>
 <p>Using the data provide by the VAST challenge, we are looking into the <a href="https://vast-challenge.github.io/2023/MC2.html">Mini-Challenge 2</a> (MC2) to identify compaines possibly engaged in illegal, unreported, and unregulated (IUU) fishing.</p>
 <p>When looking into IUU, we need to understand transshipment plays crucial roles in facilitating IUU fishing. Fishing ships will transfer its catch to other ships which would launder the catch to other countries - presumably their won. According to <a href="https://www.oceansinc.earth/transshipment#:~:text=Transshipment%20can%20facilitate%20IUU%20fishing,fish%20to%20be%20%E2%80%9Claundered%E2%80%9D.">OCEANS</a>, as many as 20% of global fishing catch is from IUU sources.</p>
-<p>Below, we will use Social Network Analysis (SNA) to understand to observe if we could uncover suspicious IUU activities.</p>
+<p>In the MC2 also mentioned that, when comapnies caught fishing illegally will shut down but will then often start up again under a different name, below we will visualize temporal patterns to identify if there are companies like this.</p>
+<p>Below, we will use Social Network Analysis (SNA) and other relevant tools to understand to observe if we could uncover suspicious IUU activities.</p>
 </section>
 <section id="data-preparation" class="level1">
 <h1>Data Preparation</h1>
@@ -323,7 +329,6 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <li><p><code>jsonlite</code>: Used for loading json data file.</p></li>
 <li><p><code>tidygraph</code>: Used for visualising network graph.</p></li>
 <li><p><code>visNetwork</code>: Used for visualising interactive network graph.</p></li>
-<li><p><code>pacthwork</code>: Used to combine plots.</p></li>
 <li><p><code>ggrepel</code>: ggrepel provides geoms for&nbsp;<code>ggplot2</code>&nbsp;to repel overlapping text labels.</p></li>
 <li><p><code>ggraph</code>: extension of <code>ggplot2</code></p></li>
 <li><p><code>igraph</code>: Network Analysis and Visualization.</p></li>
@@ -331,7 +336,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <div class="cell">
 <details>
 <summary>Show the code</summary>
-<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(jsonlite, tidygraph, ggraph, visNetwork, tidyverse, lubridate, ggplot2, ggthemes, igraph, patchwork, ggrepel)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(jsonlite, tidygraph, ggraph, visNetwork, tidyverse, lubridate, ggplot2, ggthemes, igraph, ggrepel)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 </div>
 </section>
@@ -497,7 +502,10 @@ $ weights  &lt;int&gt; 11, 11, 14, 12, 12, 15, 12, 15, 11, 13, 11, 14, 11, 11, 1
 <span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>                       <span class="at">directed =</span> <span class="cn">TRUE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 </div>
-<p>Many</p>
+<p>For the graphs below, the nodes are the fishing companies and the edges (links) are amount of times they are interacting with other nodes.</p>
+<p>As mentioned in the introduction, transshipment could be a way for ships to launder the IUU fishes, we plot the below graph, by filtering the nodes that has high in-degree. Nodes with high in-degree here means, it received a lot of shirmps/catfish/tuna from other ships.</p>
+<section id="plot-network-graph" class="level2">
+<h2 class="anchored" data-anchor-id="plot-network-graph">Plot Network Graph</h2>
 <div class="cell">
 <details>
 <summary>Show the code</summary>
@@ -518,6 +526,7 @@ $ weights  &lt;int&gt; 11, 11, 14, 12, 12, 15, 12, 15, 11, 13, 11, 14, 11, 11, 1
 <p><img src="Take-home_Ex02_files/figure-html/unnamed-chunk-9-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
+<p>We are also interested to know the high out-degree nodes, and later in the interactive nodes, we can example if any of these high out-degree nodes actually supplies to the above high in-dgree nodes.</p>
 <div class="cell">
 <details>
 <summary>Show the code</summary>
@@ -538,6 +547,10 @@ $ weights  &lt;int&gt; 11, 11, 14, 12, 12, 15, 12, 15, 11, 13, 11, 14, 11, 11, 1
 <p><img src="Take-home_Ex02_files/figure-html/unnamed-chunk-10-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
+</section>
+<section id="plot-temporal-graph" class="level2">
+<h2 class="anchored" data-anchor-id="plot-temporal-graph">Plot Temporal Graph</h2>
+<p>Based on the network graphs above, we realized that weights become significant when its more than 15, hence, below we plot the calendar heatmap for companies have higher activities (weight &gt;= 15) to understand their trading patterns over time.</p>
 <div class="cell">
 <details>
 <summary>Show the code</summary>
@@ -547,7 +560,7 @@ $ weights  &lt;int&gt; 11, 11, 14, 12, 12, 15, 12, 15, 11, 13, 11, 14, 11, 11, 1
 <span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>top_weights <span class="ot">&lt;-</span> MC2_edges_aggregated<span class="sc">%&gt;%</span></span>
 <span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(weights <span class="sc">&gt;=</span> <span class="dv">15</span>)</span>
 <span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a> <span class="fu">ggplot</span>(top_weights, <span class="fu">aes</span>(<span class="at">x=</span>Month_Yr, <span class="at">y=</span>source, <span class="at">fill=</span>weights))<span class="sc">+</span></span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a> <span class="fu">ggplot</span>(top_weights, <span class="fu">aes</span>(<span class="at">x=</span>Month_Yr, <span class="at">y=</span>target, <span class="at">fill=</span>weights))<span class="sc">+</span></span>
 <span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_tile</span>(<span class="at">colour=</span><span class="st">"White"</span>, <span class="at">show.legend=</span><span class="cn">FALSE</span>)<span class="sc">+</span></span>
 <span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_classic</span>()<span class="sc">+</span></span>
 <span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_fill_distiller</span>(<span class="at">palette=</span><span class="st">"Spectral"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -559,7 +572,7 @@ $ weights  &lt;int&gt; 11, 11, 14, 12, 12, 15, 12, 15, 11, 13, 11, 14, 11, 11, 1
 <div class="cell">
 <details>
 <summary>Show the code</summary>
-<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a> <span class="fu">ggplot</span>(top_weights, <span class="fu">aes</span>(<span class="at">x=</span>Month_Yr, <span class="at">y=</span>target, <span class="at">fill=</span>weights))<span class="sc">+</span></span>
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a> <span class="fu">ggplot</span>(top_weights, <span class="fu">aes</span>(<span class="at">x=</span>Month_Yr, <span class="at">y=</span>source, <span class="at">fill=</span>weights))<span class="sc">+</span></span>
 <span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_tile</span>(<span class="at">colour=</span><span class="st">"White"</span>, <span class="at">show.legend=</span><span class="cn">FALSE</span>)<span class="sc">+</span></span>
 <span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_classic</span>()<span class="sc">+</span></span>
 <span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_fill_distiller</span>(<span class="at">palette=</span><span class="st">"Spectral"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -568,10 +581,46 @@ $ weights  &lt;int&gt; 11, 11, 14, 12, 12, 15, 12, 15, 11, 13, 11, 14, 11, 11, 1
 <p><img src="Take-home_Ex02_files/figure-html/unnamed-chunk-12-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
-<p>Finding the cluster, check if can label the cluster for each node.</p>
+</section>
+<section id="insights" class="level2">
+<h2 class="anchored" data-anchor-id="insights">Insights</h2>
+<p>Based on the network graphs and the heatmaps rom the above two network graph, some companies have high in/out degree but their activties are consistent across the time, hence we would think that those are the legal companies, and I have identified some prominent company pairs in the table below that caught my attention with their abrupt activities in the heatmap.</p>
+<table class="table">
+<colgroup>
+<col style="width: 53%">
+<col style="width: 46%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>High in-degree companies</th>
+<th>High out-degree companies</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Yu xian SRL Industrial</td>
+<td>Kerala Market - Ges.m.b.H. Cargo</td>
+</tr>
+<tr class="even">
+<td>Volga River LLC Enterprises</td>
+<td>Estrella de la Costa SRL</td>
+</tr>
+<tr class="odd">
+<td>Sea Breeze Corporation Marine sanctuary</td>
+<td>Manipur Market Corporation Cargo</td>
+</tr>
+<tr class="even">
+<td>Sea Turtle GmbH &amp; Co.&nbsp;KG</td>
+<td>Dutch Eel AB Holdings</td>
+</tr>
+</tbody>
+</table>
+<p>These companies form the demand-supply pairs, as seemed in the network graphs, and from the calendar heatmap, we can see their activtities match - both will be active in the same period and then disappear after “getting caught”. These could be suspicious companies that we should look into more details in the personels involved to see if there are any leads.</p>
+</section>
 </section>
 <section id="interactive-network-graph" class="level1">
 <h1>Interactive Network Graph</h1>
+<p>Below visNetwork() is used for the interactive network graph, so from the above identified companies, we are able to select those companies by the id dropdown to observe the network around them.</p>
 <div class="cell">
 <details>
 <summary>Show the code</summary>
