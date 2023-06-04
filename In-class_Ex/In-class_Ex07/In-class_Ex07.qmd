@@ -1,0 +1,43 @@
+---
+title: "In-Class Exercise 7"
+subtitle: "Time on the Horizon: ggHoriPlot Methods"
+date-modified: "`r Sys.Date()`"
+format: html
+execute: 
+  echo: true
+  eval: true
+  warning: false
+editor: visual
+---
+
+```{r}
+pacman::p_load(ggHoriPlot, ggthemes, tidyverse)
+```
+
+```{r}
+averp <- read_csv("data/AVERP.csv") %>%
+  mutate('Date' = dmy('Date'))
+```
+
+```{r}
+averp %>% 
+  filter(Date>= "2018-01-01") %>%
+  ggplot(data = ) +
+  geom_horizon(aes(x = Date, y= Values), 
+               origin = "midpoint", 
+               horizonscale = 6)+
+  facet_grid("Consumer Items" ~.) +
+    theme_few() +
+  scale_fill_hcl(palette = 'RdBu') +
+  theme(panel.spacing.y=unit(0, "lines"), strip.text.y = element_text(
+    size = 5, angle = 0, hjust = 0),
+    legend.position = 'none',
+    axis.text.x = element_text(size=7)
+    ) +
+    scale_x_date(expand=c(0,0), date_breaks = "3 month", date_labels = "%b%y") +
+  ggtitle('Average Retail Prices of Selected Consumer Items (Jan 2018 to Dec 2022)')
+```
+
+```{r}
+
+```

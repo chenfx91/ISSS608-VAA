@@ -17,6 +17,10 @@ date-modified: "`r Sys.Date()`"
 
 Using the data provide by the VAST challenge, we are looking into the [Mini-Challenge 2](https://vast-challenge.github.io/2023/MC2.html) (MC2) to identify compaines possibly engaged in illegal, unreported, and unregulated (IUU) fishing.
 
+When looking into IUU, we need to understand transshipment plays crucial roles in facilitating IUU fishing. Fishing ships will transfer its catch to other ships which would launder the catch to other countries - presumably their won. According to [OCEANS](https://www.oceansinc.earth/transshipment#:~:text=Transshipment%20can%20facilitate%20IUU%20fishing,fish%20to%20be%20%E2%80%9Claundered%E2%80%9D.), as many as 20% of global fishing catch is from IUU sources.
+
+Below, we will use Social Network Analysis (SNA) to understand to observe if we could uncover suspicious IUU activities.
+
 # Data Preparation
 
 ## Load Packages
@@ -30,7 +34,7 @@ The code chunk below uses `pacman::p_load()` to check if packages are installe
 -   `ggthemes`: Provide additional themes for `ggplot2` .
 
 ```{r}
-pacman::p_load(jsonlite, tidygraph, ggraph, visNetwork, tidyverse, lubridate, ggplot2, ggthemes, igraph, patchwork, ggrepel)
+pacman::p_load(jsonlite, tidygraph, ggraph, visNetwork, tidyverse, lubridate, ggplot2, ggthemes, igraph, patchwork, ggrepel,heatmaply)
 ```
 
 ## Data Importing and wraggling
@@ -109,8 +113,6 @@ MC2_edges_aggregated_306170 <- filtered_MC2_edges %>%
 glimpse(MC2_edges_aggregated_306170)
 ```
 
-Want to understand which period most activities.
-
 ```{r}
 id1 <- MC2_edges_aggregated_306170 %>%
   select(source) %>%
@@ -122,118 +124,65 @@ MC2_nodes_extracted_306170 <- rbind(id1, id2) %>%
   distinct()
 ```
 
+# Data Visualization
+
 ```{r}
 mc2_graph_306170 <- tbl_graph(nodes = MC2_nodes_extracted_306170,
                        edges = MC2_edges_aggregated_306170,
                        directed = TRUE)
-
 ```
+
+Many
 
 ```{r}
 set.seed (1234)
-ggraph(mc2_graph_306170,
-       layout = "fr") +
-  geom_edge_link(aes()) +
-  geom_node_point(aes()) +
+V(mc2_graph_306170)$degree <- degree(mc2_graph_306170, mode = "in")
+
+ggraph(mc2_graph_306170, 'igraph', algorithm = 'fr') + 
+  geom_edge_link0(aes(width = weights), edge_alpha = 0.1) + 
+  geom_node_point(aes(size = degree), colour = 'steelblue') + 
+  geom_node_text(aes(label = id, filter = degree > 60), color = 'black', 
+                 size = 3, repel = TRUE) + 
   theme_graph()
 ```
 
 ```{r}
-mc2_graph_306170 <- mc2_graph_306170%>%
-  as_tbl_graph()
-```
+set.seed (1234)
+V(mc2_graph_306170)$degree <- degree(mc2_graph_306170, mode = "out")
 
-```{r}
-quantile_graph_306170 <- quantile(eigen_centrality(mc2_graph_306170)$vector,
-         probs = seq(0, 1, 1/5)
-         )
-V(mc2_graph_306170)$size = eigen_centrality(mc2_graph_306170)$vector
-
-mc2_graph_306170_agg <- delete_vertices(mc2_graph_306170, V(mc2_graph_306170)[size < quantile_graph_306170[5]])
-
-
-layout1 <- layout_with_fr(mc2_graph_306170_agg)
-
-quantile_graph_306170_agg <- quantile(V(mc2_graph_306170_agg)$size, #identify top 20% of the new vertices
-         probs = seq(0, 1, 1/5)
-         )
-
-V(mc2_graph_306170_agg)$color <- ifelse (V(mc2_graph_306170_agg)$size > quantile_graph_306170_agg[5], "darkgoldenrod3", "azure3") #color yellow if vertices is top 20%
-E(mc2_graph_306170_agg)$color <- "grey"
-V(mc2_graph_306170_agg)$size <- V(mc2_graph_306170_agg)$size/0.065 
-#Increase the size of nodes based on their centrality score, only those with high score will be visible
-
-plot(mc2_graph_306170_agg, edge.arrow.size=0.25,edge.arrow.mode = "-", vertex.label = V(mc2_graph_306170_agg)$label, vertex.label.cex = 0.65, vertex.label.font = 2, main = "Which id?" ) 
+ggraph(mc2_graph_306170, 'igraph', algorithm = 'fr') + 
+  geom_edge_link0(aes(width = weights), edge_alpha = 0.1) + 
+  geom_node_point(aes(size = degree), colour = 'steelblue') + 
+  geom_node_text(aes(label = id, filter = degree > 40), color = 'black', 
+                 size = 3, repel = TRUE) + 
+  theme_graph()
 
 ```
 
-From the above graph, we can see that node 1, 12, 13 and 19 stand out as they have higher degree centrality than the rest. Below code reviews these important nodes.
-
 ```{r}
-vertex_attr(mc2_graph_306170_agg, index = V(mc2_graph_306170_agg)$size > quantile_graph_306170_agg[5])
-```
+MC2_edges_aggregated_306170$Month_Yr <- as.Date(paste0(MC2_edges_aggregated_306170$Month_Yr, "-01"), format = "%Y-%m-%d")
 
-`centrality_betweeness()` measure the centrality of every nodes by calculating how many shortest path containing that node in the network. This can be visualized to give you information about how important each node in the term of graph/network connectivity. For this case, we can see how important a node is between trades of other companies.
 
-```{r}
-g <- mc2_graph_306170 %>%
-  mutate(betweenness_centrality = centrality_betweenness()) %>%
-  ggraph(layout = "fr") + 
-  geom_edge_link(aes(width=weights), alpha=0.2) +
-  scale_edge_width(range = c(0.1, 5)) +
-  geom_node_point(aes(colour = id,size=betweenness_centrality)) 
-  #geom_node_text(aes(label = id), repel = TRUE)+
-  #scale_color_gradient(low = "yellow", high = "red")
+top_50_weights <- MC2_edges_aggregated_306170 %>%
+  top_n(50, wt = weights)
 
-g + theme_graph()
+ ggplot(top_50_weights, aes(x=Month_Yr, y=source, fill=weights))+
+  geom_tile(colour="White", show.legend=FALSE)+
+  theme_classic()+
+  scale_fill_distiller(palette="Spectral")
+
+
 ```
 
 ```{r}
-g <- mc2_graph_306170 %>%
-  mutate(betweenness_centrality = centrality_betweenness()) %>%
-  ggraph(layout = "fr") + 
-  geom_edge_link(aes(width=weights), 
-                 alpha=0.2) +
-  scale_edge_width(range = c(0.1, 5)) +
-  geom_node_point(aes(colour = id, size=betweenness_centrality)) 
-
-g + theme_graph()
-
-```
-
-Check the temporal trading frequencies of the companies with high degree of centrality.
-
-```{r}
-p1 <- ggplot(data = MC2_edges_aggregated_306170, aes(x = Month_Yr, y = weights, group = 19)) +
-  geom_line()+
-  ggtitle("Temporal Evolution of Weights")  +
-  theme(axis.title.y= element_text(angle=90), axis.ticks.x= element_blank(),
-        axis.line= element_line(color= 'grey'),
-        axis.text.x = element_text(angle = 90, hjust = 1))
-
-p2 <- ggplot(data = MC2_edges_aggregated_306170, aes(x = Month_Yr, y = weights, group = 13)) +
-  geom_line()+
-  ggtitle("Temporal Evolution of Weights")  +
-  theme(axis.title.y= element_text(angle=90), axis.ticks.x= element_blank(),
-        axis.line= element_line(color= 'grey'),
-        axis.text.x = element_text(angle = 90, hjust = 1))
-
-p1/p2
+ ggplot(top_50_weights, aes(x=Month_Yr, y=target, fill=weights))+
+  geom_tile(colour="White", show.legend=FALSE)+
+  theme_classic()+
+  scale_fill_distiller(palette="Spectral")
+ 
 ```
 
 Finding the cluster, check if can label the cluster for each node.
-
-```{r}
-g <- mc2_graph_306170 %>%
-  mutate(community = as.factor(group_edge_betweenness(weights = weights, directed = TRUE))) %>%
-  ggraph(layout = "fr") + 
-  geom_edge_link(aes(width=weights), 
-                 alpha=0.2) +
-  scale_edge_width(range = c(0.1, 5)) +
-  geom_node_point(aes(colour = community))  
-
-g + theme_graph()
-```
 
 # Interactive Network Graph
 
@@ -247,7 +196,8 @@ nodes_df <- mc2_graph_306170 %>%
   as.tibble() %>%
   rename(label = id) %>%
   mutate(id=row_number()) %>%
-  select(id, label)
+  select(id, label) %>%
+  mutate(group = label)
 ```
 
 ```{r}
@@ -259,6 +209,5 @@ visNetwork(nodes_df,
                          type = "curvedCW")) %>%
   visOptions(highlightNearest = TRUE,
              nodesIdSelection = TRUE) %>%
-  visLegend() %>%
   visLayout(randomSeed = 123)
 ```

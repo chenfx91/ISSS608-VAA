@@ -1,0 +1,47 @@
+---
+title: "Take Home Exercise 3"
+author: "Fangxian"
+---
+
+```{r}
+pacman::p_load(jsonlite, tidygraph, ggraph, visNetwork, graphlayouts, ggforce, tidytext, tidyverse)
+```
+
+```{r}
+mc3_data <- fromJSON("data/MC3.json")
+```
+
+Examine the data, this is not a directed graph, not looking into in- and out-degree of the nodes.
+
+Below code chunk changes the links field into character field.
+
+```{r}
+mc3_edges <- as_tibble(mc3_data$links)%>%
+  distinct() %>%
+  mutate(source = as.character(source),
+         target = as.character(target),
+         type = as.character(type)) %>%
+  group_by(source, target, type) %>%
+    summarise(weights = n()) %>%
+  filter(source!=target)%>%
+  ungroup
+```
+
+```{r}
+mc3_nodes <- as_tibble(mc3_data$nodes) %>%
+#  distinct()%>%
+  mutate(country = as.character(country),
+         id = as.character(id),
+         product_services = as.character(product_services),
+         revenue_omu = as.numeric(as.character(revenue_omu)),
+         type = as.character(type)) %>%
+    select(id, country, type, revenue_omu, product_services)
+```
+
+Convert character(0) for type to NA for text sensing
+
+```{r}
+ggplot(data = mc3_nodes,
+       aes(x=type)) +
+  geom_bar()
+```
