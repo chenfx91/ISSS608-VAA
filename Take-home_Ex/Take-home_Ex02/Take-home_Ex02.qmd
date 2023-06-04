@@ -90,7 +90,7 @@ MC2_edges <- as_tibble(MC2$links) %>%
 
 Hscode is the Harmonized System with standardized numerical method of classifying traded products. Since we are interested in the fish related products, hscode that is related to fish and its products are shown in the table below.
 
-[![](data/fishhscode.PNG){fig-align="center"}](https://www.fao.org/3/cb3813en/cb3813en.pdf)
+[![](data/fishhscode.PNG)](https://www.fao.org/3/cb3813en/cb3813en.pdf)
 
 Code chunk is run to filter all the hscode with fish related trades and identify the top 3 most traded fish products, namely,
 
