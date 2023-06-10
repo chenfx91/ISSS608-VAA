@@ -217,7 +217,7 @@ top_weights <- MC2_edges_aggregated%>%
 Based on the network graphs and the heatmaps rom the above two network graph, some companies have high in/out degree but their activties are consistent across the time, hence we would think that those are the legal companies, and I have identified some prominent company pairs in the table below that caught my attention with their abrupt activities in the heatmap.
 
 | High in-degree companies                | High out-degree companies        |
-|---------------------------------|-----------------------------|
+|-----------------------------------------|----------------------------------|
 | Yu xian SRL Industrial                  | Kerala Market - Ges.m.b.H. Cargo |
 | Volga River LLC Enterprises             | Estrella de la Costa SRL         |
 | Sea Breeze Corporation Marine sanctuary | Manipur Market Corporation Cargo |

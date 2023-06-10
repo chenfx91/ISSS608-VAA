@@ -1,17 +1,39 @@
 ---
 title: "Take Home Exercise 3"
+subtitle: "Uncover illegal, unreported, and unregulated (IUU) fishing activities through visual analytics"
+format: 
+  html: 
+    code-fold: true
+    code-summary: "Show the code"
 author: "Fangxian"
+execute: 
+  eval: true
+  warning: false
+date: "4 June 2023"
+date-modified: "`r Sys.Date()`"
 ---
 
+# Task
+
+# Data Wraggling
+
+## Load Packages
+
 ```{r}
-pacman::p_load(jsonlite, tidygraph, ggraph, visNetwork, graphlayouts, ggforce, tidytext, tidyverse)
+pacman::p_load(jsonlite, tidygraph, ggraph, visNetwork, graphlayouts, ggforce,skimr,tidytext, tidyverse)
 ```
+
+## Data Import
+
+In the code chunk below, `fromJSON()` of **jsonlite** package is used to import *MC3.json* into R environment.
 
 ```{r}
 mc3_data <- fromJSON("data/MC3.json")
 ```
 
 Examine the data, this is not a directed graph, not looking into in- and out-degree of the nodes.
+
+## Extracting edges
 
 Below code chunk changes the links field into character field.
 
@@ -27,6 +49,8 @@ mc3_edges <- as_tibble(mc3_data$links)%>%
   ungroup
 ```
 
+## Extracting nodes
+
 ```{r}
 mc3_nodes <- as_tibble(mc3_data$nodes) %>%
 #  distinct()%>%
@@ -38,10 +62,148 @@ mc3_nodes <- as_tibble(mc3_data$nodes) %>%
     select(id, country, type, revenue_omu, product_services)
 ```
 
+# Initial Data Exploration
+
+## Exploring the edges data frame
+
+In the code chunk below, [`skim()`](https://docs.ropensci.org/skimr/reference/skim.html) of [**skimr**](https://docs.ropensci.org/skimr/) package is used to display the summary statistics of *mc3_edges* tibble data frame.
+
+```{r}
+skim(mc3_edges)
+```
+
+The report above reveals that there is not missing values in all fields.
+
+In the code chunk below, `datatable()` of DT package is used to display mc3_edges tibble data frame as an interactive table on the html document.
+
+```{r}
+DT::datatable(mc3_edges)
+```
+
 Convert character(0) for type to NA for text sensing
 
 ```{r}
-ggplot(data = mc3_nodes,
+ggplot(data = mc3_edges,
        aes(x=type)) +
   geom_bar()
+```
+
+# Initial Network Visualization and Analysis
+
+## Building network model with tidygraph
+
+```{r}
+id1 <- mc3_edges %>%
+  select(source) %>%
+  rename(id = source)
+id2 <- mc3_edges %>%
+  select(target) %>%
+  rename(id = target)
+mc3_nodes1 <- rbind(id1, id2) %>%
+  distinct() %>%
+  left_join(mc3_nodes,
+            unmatched = "drop")
+```
+
+```{r}
+mc3_graph <- tbl_graph(nodes = mc3_nodes1,
+                       edges = mc3_edges,
+                       directed = FALSE) %>%
+  mutate(betweenness_centrality = centrality_betweenness(),
+         closeness_centrality = centrality_closeness())
+```
+
+```{r}
+mc3_graph %>%
+  filter(betweenness_centrality >= 100000) %>%
+ggraph(layout = "fr") +
+  geom_edge_link(aes(alpha=0.5)) +
+  geom_node_point(aes(
+    size = betweenness_centrality,
+    colors = "lightblue",
+    alpha = 0.5)) +
+  scale_size_continuous(range=c(1,10))+
+  theme_graph()
+```
+
+## Exploring the nodes dataframe
+
+```{r}
+skim(mc3_nodes)
+```
+
+The report above reveals that there is no missing values in all fields.
+
+In the code chunk below, `datatable()` of DT package is used to display mc3_nodes tibble data frame as an interactive table on the html document.
+
+```{r}
+DT::datatable(mc3_nodes)
+```
+
+```{r}
+ggplot(data = mc3_nodes,
+       aes(x = type)) +
+  geom_bar()
+```
+
+# Text Sensing with tidytext
+
+## Simple word count
+
+The code chunk below calculates number of times the word *fish* appeared in the field *product_services*.
+
+```{r}
+mc3_nodes %>% 
+    mutate(n_fish = str_count(product_services, "fish")) 
+```
+
+## Tokenisation
+
+The word tokenisation have different meaning in different scientific domains. In text sensing, **tokenisation** is the process of breaking up a given text into units called **tokens**. Tokens can be individual words, phrases or even whole sentences. In the process of tokenisation, some characters like punctuation marks may be discarded. The tokens usually become the input for the processes like parsing and text mining.
+
+In the code chunk below, [`unnest_token()`](https://juliasilge.github.io/tidytext/reference/unnest_tokens.html) of tidytext is used to split text in *product_services* field into words.
+
+```{r}
+token_nodes <- mc3_nodes %>%
+  unnest_tokens(word, 
+                product_services)
+```
+
+The two basic arguments to `unnest_tokens()` used here are column names. First we have the output column name that will be created as the text is unnested into it (*word*, in this case), and then the input column that the text comes from (*product_services*, in this case).
+
+```{r}
+token_nodes %>%
+  count(word, sort = TRUE) %>%
+  top_n(15) %>%
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(x = word, y = n)) +
+  geom_col() +
+  xlab(NULL) +
+  coord_flip() +
+      labs(x = "Count",
+      y = "Unique words",
+      title = "Count of unique words found in product_services field")
+```
+
+The bar chart reveals that the unique words contains some words that may not be useful to use. For instance \"a\" and \"to\". In the word of text mining we call those words **stop words**. You want to remove these words from your analysis as they are fillers used to compose a sentence.
+
+## Removing stopwords
+
+```{r}
+stopwords_removed <- token_nodes %>% 
+  anti_join(stop_words)
+```
+
+```{r}
+stopwords_removed %>%
+  count(word, sort = TRUE) %>%
+  top_n(15) %>%
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(x = word, y = n)) +
+  geom_col() +
+  xlab(NULL) +
+  coord_flip() +
+      labs(x = "Count",
+      y = "Unique words",
+      title = "Count of unique words found in product_services field")
 ```
