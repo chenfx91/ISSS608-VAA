@@ -437,7 +437,7 @@ ggplot(as.data.frame(mc3_graph_topic10),aes(x=betweenness))+
   theme(plot.title = element_text(hjust=0.5))
 ```
 
-Looking at this, we can filter our records where the centrality between is greater than 20 to understand the interactions.
+Looking at this, we can filter our records where the centrality between is greater than 75 to understand the interactions.
 
 ```{r}
 set.seed (1234)
@@ -474,3 +474,7 @@ ggraph(layout = "fr") +
   geom_node_text(aes(label = id, filter= betweenness >=200 &degree >0), repel = TRUE)+
   theme_graph()
 ```
+
+## Insights and future work
+
+Looking at the above two network graph, we see there are some overlapping companies in these two topic groups. Upcoming work will look into the similarities between these two groups.
