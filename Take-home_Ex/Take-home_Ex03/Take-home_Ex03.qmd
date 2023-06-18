@@ -20,7 +20,7 @@ date-modified: "`r Sys.Date()`"
 ## Load Packages
 
 ```{r}
-pacman::p_load(jsonlite, tidygraph, ggraph, visNetwork, graphlayouts, ggforce,skimr,tidytext, tidyverse)
+pacman::p_load(jsonlite, tidygraph, ggraph, visNetwork, graphlayouts, ggforce,skimr,tidytext, tidyverse,igraph)
 ```
 
 ## Data Import
@@ -64,7 +64,7 @@ mc3_nodes <- as_tibble(mc3_data$nodes) %>%
 
 # Initial Data Exploration
 
-## Exploring the edges data frame
+## Exploring the edges dataframe
 
 In the code chunk below, [`skim()`](https://docs.ropensci.org/skimr/reference/skim.html) of [**skimr**](https://docs.ropensci.org/skimr/) package is used to display the summary statistics of *mc3_edges* tibble data frame.
 
@@ -80,50 +80,53 @@ In the code chunk below, `datatable()` of DT package is used to display mc3_edge
 DT::datatable(mc3_edges)
 ```
 
-Convert character(0) for type to NA for text sensing
+counting number of companies a person owns
 
 ```{r}
 ggplot(data = mc3_edges,
        aes(x=type)) +
   geom_bar()
-```
 
-# Initial Network Visualization and Analysis
+unique_ids <- unique(mc3_edges$target)
+num_unique_ids <- length(unique_ids)
+num_unique_ids
 
-## Building network model with tidygraph
+Noofcompanies <- mc3_edges %>%
+  group_by(target, source, type) %>%
+  filter(type == "Beneficial Owner") %>%
+  summarise(count=n()) %>%
+  group_by(target)%>%
+  summarise(count=sum(count))
 
-```{r}
-id1 <- mc3_edges %>%
-  select(source) %>%
-  rename(id = source)
-id2 <- mc3_edges %>%
-  select(target) %>%
-  rename(id = target)
-mc3_nodes1 <- rbind(id1, id2) %>%
-  distinct() %>%
-  left_join(mc3_nodes,
-            unmatched = "drop")
-```
+psych::describe(Noofcompanies)
 
-```{r}
-mc3_graph <- tbl_graph(nodes = mc3_nodes1,
-                       edges = mc3_edges,
-                       directed = FALSE) %>%
-  mutate(betweenness_centrality = centrality_betweenness(),
-         closeness_centrality = centrality_closeness())
+# list <- mc3_edges1 %>%
+#   filter(mc3_edges1$count > 1)
+# 
+# psych::describe(list)
 ```
 
 ```{r}
-mc3_graph %>%
-  filter(betweenness_centrality >= 100000) %>%
-ggraph(layout = "fr") +
-  geom_edge_link(aes(alpha=0.5)) +
-  geom_node_point(aes(
-    size = betweenness_centrality,
-    colors = "lightblue",
-    alpha = 0.5)) +
-  scale_size_continuous(range=c(1,10))+
-  theme_graph()
+Noofowners <- mc3_edges %>%
+  group_by(source, target, type) %>%
+  summarise(count=n()) %>%
+  group_by(source)%>%
+  summarise(count=sum(count))
+
+psych::describe(Noofowners)
+```
+
+\
+
+```{r}
+list_top_50 <- Noofcompanies %>%
+  arrange(desc(count)) %>%
+  top_n(50, wt = count) 
+
+ggplot(data = list_top_50, 
+       aes(x = reorder(target, -count), y = count)) +
+  geom_bar(stat = "identity") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
 ```
 
 ## Exploring the nodes dataframe
@@ -144,6 +147,46 @@ DT::datatable(mc3_nodes)
 ggplot(data = mc3_nodes,
        aes(x = type)) +
   geom_bar()
+```
+
+Check on the revenue
+
+```{r}
+ggplot(data = mc3_nodes,
+       aes(x= type,
+         y = revenue_omu)) +
+  geom_boxplot()
+```
+
+```{r}
+combined <- left_join(mc3_nodes,mc3_edges,
+                  by=c("id"="source"))
+```
+
+Pivot to find out on the revenue fron the target. find out about which target has high revenue
+
+```{r}
+combined <- combined %>%
+  group_by(target, type.y, id, country, type.x, product_services)%>%
+  summarize(revenue_omu) %>%
+  filter(type.y == "Beneficial Owner")
+
+filtered_combined <- combined %>%
+  filter(target %in% list_top_50$target)%>%
+  arrange(desc(revenue_omu))
+
+ggplot(data = filtered_combined, 
+       aes(x = target, y = revenue_omu)) +
+  geom_bar(stat = "identity") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
+```
+
+```{r}
+Top_3_Revenue<- combined %>%
+  filter (target %in% c("Michael Johnson", "Mark Miller","James Rodriguez")) %>%
+  arrange(desc(revenue_omu))
+
+DT::datatable(Top_3_Revenue)
 ```
 
 # Text Sensing with tidytext
@@ -185,9 +228,16 @@ token_nodes %>%
       title = "Count of unique words found in product_services field")
 ```
 
-The bar chart reveals that the unique words contains some words that may not be useful to use. For instance \"a\" and \"to\". In the word of text mining we call those words **stop words**. You want to remove these words from your analysis as they are fillers used to compose a sentence.
+The bar chart reveals that the unique words contains some words that may not be useful to use. For instance "a" and "to". In the word of text mining we call those words **stop words**. You want to remove these words from your analysis as they are fillers used to compose a sentence.
+
+Using filter we also discover many "character(0)" which has no meaning in itself, we will also proceed to replace them with "NA".
 
 ## Removing stopwords
+
+```{r}
+token_nodes$word[token_nodes$word == "character"] <- "NA"
+token_nodes$word[token_nodes$word == "0"] <- "NA"
+```
 
 ```{r}
 stopwords_removed <- token_nodes %>% 
@@ -207,3 +257,50 @@ stopwords_removed %>%
       y = "Unique words",
       title = "Count of unique words found in product_services field")
 ```
+
+```{r}
+stopwords_removed %>%
+  count(word, sort = TRUE) %>%
+  top_n(20) %>%
+  mutate(word = reorder(word, n)) %>%
+  filter(!word %in% head(word, 3)) %>%
+  ggplot(aes(x = word, y = n)) +
+  geom_col() +
+  xlab(NULL) +
+  coord_flip() +
+  labs(x = "Count",
+       y = "Unique words",
+       title = "Count of unique words found in product_services field")
+
+```
+
+# Initial Network Visualization and Analysis
+
+## Building network model with tidygraph
+
+```{r}
+mc3_nodes_fish <- stopwords_removed %>%
+  filter(stopwords_removed$word == "fish")
+```
+
+```{r}
+mc3_edges_fish <- mc3_edges[mc3_edges$source %in% mc3_nodes_fish$id,]  
+id1 <- mc3_edges_fish %>%
+  select(source) %>%
+  rename(id = source) 
+id2 <- mc3_edges_fish %>% 
+  select(target) %>% 
+  rename(id = target) 
+mc3_nodes_fish <- rbind(id1, id2) %>%
+  distinct() %>% 
+  left_join(mc3_nodes_fish,
+            unmatched = "drop") 
+```
+
+```{r}
+# mc3_graph <- tbl_graph(nodes = mc3_nodes_fish,                        
+#                        edges = mc3_edges_fish,                        
+#                        directed = FALSE)  mc3_graph
+```
+
+# Topic Modelling
