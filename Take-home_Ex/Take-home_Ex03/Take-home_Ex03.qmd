@@ -15,12 +15,14 @@ date-modified: "`r Sys.Date()`"
 
 # Task
 
+Using the data provide by the VAST challenge, we are looking into the [Mini-Challenge 3](https://vast-challenge.github.io/2023/MC3.html) (MC3) to identify compaines possibly engaged in illegal, unreported, and unregulated (IUU) fishing.
+
 # Data Wraggling
 
 ## Load Packages
 
 ```{r}
-pacman::p_load(jsonlite, tidygraph, ggraph, visNetwork, graphlayouts, ggforce,skimr,tidytext, tidyverse,igraph)
+pacman::p_load(jsonlite, tidygraph, ggraph, visNetwork, graphlayouts, ggforce,skimr,tidytext, tidyverse,igraph, topicmodels,tm)
 ```
 
 ## Data Import
@@ -80,7 +82,7 @@ In the code chunk below, `datatable()` of DT package is used to display mc3_edge
 DT::datatable(mc3_edges)
 ```
 
-counting number of companies a person owns
+Below code chunks, counting number of companies a person owns and the number of owners a company has.
 
 ```{r}
 ggplot(data = mc3_edges,
@@ -99,11 +101,6 @@ Noofcompanies <- mc3_edges %>%
   summarise(count=sum(count))
 
 psych::describe(Noofcompanies)
-
-# list <- mc3_edges1 %>%
-#   filter(mc3_edges1$count > 1)
-# 
-# psych::describe(list)
 ```
 
 ```{r}
@@ -116,7 +113,7 @@ Noofowners <- mc3_edges %>%
 psych::describe(Noofowners)
 ```
 
-\
+Below code chunk we are interested to see top 50 owners owning multiple companies, with John Smith and Michael Johnson have the highest of 9 companies to their name. This could be suspicious as why they need so many companies.
 
 ```{r}
 list_top_50 <- Noofcompanies %>%
@@ -143,13 +140,15 @@ In the code chunk below, `datatable()` of DT package is used to display mc3_node
 DT::datatable(mc3_nodes)
 ```
 
+Below code chunk to find out how is the distribution among the types of ownerhships.
+
 ```{r}
 ggplot(data = mc3_nodes,
        aes(x = type)) +
   geom_bar()
 ```
 
-Check on the revenue
+Below code chunk we check on the revenue distribution among the types of ownerships.
 
 ```{r}
 ggplot(data = mc3_nodes,
@@ -158,12 +157,14 @@ ggplot(data = mc3_nodes,
   geom_boxplot()
 ```
 
+We combined the nodes and edges data so we can find out more on the owner-company relationships.
+
 ```{r}
 combined <- left_join(mc3_nodes,mc3_edges,
                   by=c("id"="source"))
 ```
 
-Pivot to find out on the revenue fron the target. find out about which target has high revenue
+Below code chunk to find out more on which owners have high number of companies also generating a lot of revenue.
 
 ```{r}
 combined <- combined %>%
@@ -181,6 +182,8 @@ ggplot(data = filtered_combined,
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
 ```
 
+Michael Johnson, Mark Miller and James Rodriguez stand out from the above chart, below code we want to see what business they did that generate more revenue.
+
 ```{r}
 Top_3_Revenue<- combined %>%
   filter (target %in% c("Michael Johnson", "Mark Miller","James Rodriguez")) %>%
@@ -188,6 +191,10 @@ Top_3_Revenue<- combined %>%
 
 DT::datatable(Top_3_Revenue)
 ```
+
+## Insights
+
+From the above data table, we see that Michael Johnson is involved in the fishing business and having many companies in different countries. The FishEye could probably look more into his business landscape across different companies and his business activities to understand more.
 
 # Text Sensing with tidytext
 
@@ -278,13 +285,17 @@ stopwords_removed %>%
 
 ## Building network model with tidygraph
 
+From the above text insights, we are interested to see the network of companies of *Beneficial Owners* with *fish* as their product services.
+
 ```{r}
 mc3_nodes_fish <- stopwords_removed %>%
   filter(stopwords_removed$word == "fish")
 ```
 
 ```{r}
-mc3_edges_fish <- mc3_edges[mc3_edges$source %in% mc3_nodes_fish$id,]  
+mc3_edges_fish <- mc3_edges[mc3_edges$source %in% mc3_nodes_fish$id,] %>%
+  filter(type == "Beneficial Owner")
+
 id1 <- mc3_edges_fish %>%
   select(source) %>%
   rename(id = source) 
@@ -298,9 +309,81 @@ mc3_nodes_fish <- rbind(id1, id2) %>%
 ```
 
 ```{r}
-# mc3_graph <- tbl_graph(nodes = mc3_nodes_fish,                        
-#                        edges = mc3_edges_fish,                        
-#                        directed = FALSE)  mc3_graph
+mc3_graph <- tbl_graph(nodes = mc3_nodes_fish,                        
+                      edges = mc3_edges_fish,                        
+                        directed = FALSE)  
+
+mc3_graph<-mc3_graph%>%
+  mutate(betweenness=centrality_betweenness())
+
+mc3_graph
+```
+
+Using the distribution function to understand the centrality_betweenness().
+
+```{r}
+ggplot(as.data.frame(mc3_graph),aes(x=betweenness))+
+  geom_histogram(bins=10,fill="lightblue",colour="black")+
+  ggtitle("Distribution of centrality betweenness")+
+  theme(plot.title = element_text(hjust=0.5))
+```
+
+Looking at this, we can filter our records where the centrality between is greater than 50 to understand the interactions.
+
+```{r}
+set.seed (1234)
+degrees <- degree(mc3_graph)
+V(mc3_graph)$degree <- degrees
+
+mc3_graph %>%
+  filter(betweenness >= 50) %>%
+ggraph(layout = "fr") +
+  geom_edge_link(aes(alpha=0.5)) +
+  geom_node_point(aes(
+    size = betweenness,
+    colors = "lightblue",
+    alpha = 0.5)) +
+  scale_size_continuous(range=c(1,10))+
+  geom_node_text(aes(label = id, filter= betweenness >=50 & degree >0), repel = TRUE)+
+  theme_graph()
+```
+
+```{r}
+list_top_30 <- Noofowners %>%
+  arrange(desc(count)) %>%
+  top_n(30, wt = count) 
+
+ggplot(data = list_top_30, 
+       aes(x = reorder(source, -count), y = count)) +
+  geom_bar(stat = "identity") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
 ```
 
 # Topic Modelling
+
+```{r}
+corpus <- Corpus(VectorSource(stopwords_removed$word))
+
+# Convert the corpus to a document-term matrix
+dtm <- DocumentTermMatrix(corpus)
+
+# Convert the document-term matrix to a tidy format
+tidy_dtm <- tidy(dtm)
+tidy_dtm
+
+# vocabulary <- tidy_dtm %>%
+#   filter(count > 1)
+# 
+# str(tidy_dtm)
+# head(tidy_dtm)
+# 
+# # Create the LDA model
+# lda_model <- LDA(tidy_dtm, k = 5, control = list(seed = 1234)) 
+
+```
+
+```{r}
+# topics <- tidy(lda_model, matrix = "beta")
+# 
+# topics
+```
