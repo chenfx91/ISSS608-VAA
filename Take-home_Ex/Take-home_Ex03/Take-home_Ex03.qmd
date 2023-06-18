@@ -22,7 +22,7 @@ Using the data provide by the VAST challenge, we are looking into the [Mini-Cha
 ## Load Packages
 
 ```{r}
-pacman::p_load(jsonlite, tidygraph, ggraph, visNetwork, graphlayouts, ggforce,skimr,tidytext, tidyverse,igraph, topicmodels,tm)
+pacman::p_load(jsonlite, tidygraph, ggraph, visNetwork, graphlayouts, ggforce,skimr,tidytext, tidyverse,igraph, topicmodels,tm, stringr, ldatuning)
 ```
 
 ## Data Import
@@ -82,7 +82,7 @@ In the code chunk below, `datatable()` of DT package is used to display mc3_edge
 DT::datatable(mc3_edges)
 ```
 
-Below code chunks, counting number of companies a person owns and the number of owners a company has.
+Below code chunks, counting number of companies a person owns.
 
 ```{r}
 ggplot(data = mc3_edges,
@@ -102,6 +102,8 @@ Noofcompanies <- mc3_edges %>%
 
 psych::describe(Noofcompanies)
 ```
+
+Below code chunk summarizes the numbers of owners to the company.
 
 ```{r}
 Noofowners <- mc3_edges %>%
@@ -265,6 +267,8 @@ stopwords_removed %>%
       title = "Count of unique words found in product_services field")
 ```
 
+Below code removed the top 3 irrelevant words.
+
 ```{r}
 stopwords_removed %>%
   count(word, sort = TRUE) %>%
@@ -281,62 +285,167 @@ stopwords_removed %>%
 
 ```
 
+# Topic Modelling
+
+This section, we will conduct topic modelling to find out the similar business groups. For this, we will make use of Latent Dirichlet Allocation (LDA).
+
+First, run the below code chunk to remove the irrelevant top 3 keywords: "NA", "unknown", "products".
+
+```{r}
+stopwords_removed <- stopwords_removed %>%
+  filter(!word %in% c("NA", "unknown", "products"))
+
+dim(stopwords_removed)
+```
+
+## Converting Document-Term Matrix
+
+We need to convert the document to a document-term matrix to to run LDA.
+
+```{r}
+# using as.matrix()
+dtm <- stopwords_removed %>%
+  count(id, word) %>%  # count each word used in each identified review 
+  cast_dtm(id, word, n) %>%  # use the word counts by reviews  to create a DTM
+  as.matrix()
+```
+
+```{r}
+# create models with different number of topics
+result <- ldatuning::FindTopicsNumber(
+  dtm,
+  topics = seq(from = 2, to = 20, by = 1),
+  metrics = c("Griffiths2004", "CaoJuan2009", "Arun2010", "Deveaud2014"),
+  method = "Gibbs",
+  control = list(seed = 77),
+  verbose = TRUE
+)
+```
+
+## Finding optimal number of topics
+
+```{r}
+FindTopicsNumber_plot(result)
+```
+
+From the above graph, we see that after topic 12, for "Griffiths2004", there isn't much increase in the value, hence, we choose topics to be 12.
+
+```{r}
+# number of topics
+K <- 12
+# set random number generator seed
+set.seed(1234)
+# compute the LDA model, inference via 1000 iterations of Gibbs sampling
+topicModel <- LDA(dtm, K, method="Gibbs", control=list(iter = 500, verbose = 25))
+```
+
+```{r}
+lda_topics <- topicModel %>%
+  tidy(matrix = "beta")
+```
+
+```{r}
+lda_topics <- LDA(
+  dtm,
+  k = 12,
+  method = "Gibbs",
+  control = list(seed=42)
+  ) %>%
+  tidy(matrix = "beta")
+word_probs <- lda_topics %>%
+  group_by(topic) %>%
+  top_n(15, beta) %>%
+  ungroup() %>%
+  mutate(term2 = fct_reorder(term, beta))
+ggplot(
+  word_probs,
+  aes(term2, beta, fill=as.factor(topic))
+  ) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~ topic, scales = "free") +
+  coord_flip()
+```
+
+## Insights
+
+From the above result, we can see topic 5 and topic 10 are most related to fishing industry. Topic 5 is a group of fishing business likely to have fresh sea products, while topic 10 is a group of fishing business likely to have more processed sea products. In the following network analysis session, we will focus on the nodes that contains topic 5 and topic 10 keywords.
+
 # Initial Network Visualization and Analysis
 
 ## Building network model with tidygraph
 
-From the above text insights, we are interested to see the network of companies of *Beneficial Owners* with *fish* as their product services.
+From the above text insights, we are interested to see the network of companies of *Beneficial Owners* with topic 5 as their product services.
 
 ```{r}
-mc3_nodes_fish <- stopwords_removed %>%
-  filter(stopwords_removed$word == "fish")
+mc3_nodes_topic5 <- stopwords_removed %>%
+  filter(stopwords_removed$word %in% c("fish","salmon","tuna","shrimp","squid","frozen","sea","cod","fillets","crabs","fillet","pollock","lobster","smoked"))
+
+mc3_nodes_topic10 <- stopwords_removed %>%
+  filter(stopwords_removed$word %in% c("seafood","fish","fresh","processing","seafoods","marine","shellfish","frozen","aquatic","oils","canning","packing","fats","cured","preparation"))
 ```
 
 ```{r}
-mc3_edges_fish <- mc3_edges[mc3_edges$source %in% mc3_nodes_fish$id,] %>%
-  filter(type == "Beneficial Owner")
-
-id1 <- mc3_edges_fish %>%
-  select(source) %>%
+mc3_edges_topic5 <- mc3_edges[mc3_edges$source %in% mc3_nodes_topic5$id,] %>%   
+  filter(type == "Beneficial Owner")  
+id1 <- mc3_edges_topic5 %>%   
+  select(source) %>%   
   rename(id = source) 
-id2 <- mc3_edges_fish %>% 
-  select(target) %>% 
-  rename(id = target) 
-mc3_nodes_fish <- rbind(id1, id2) %>%
-  distinct() %>% 
-  left_join(mc3_nodes_fish,
+id2 <- mc3_edges_topic5 %>%    
+  select(target) %>%    
+  rename(id = target)  
+mc3_nodes_topic5 <- rbind(id1, id2) %>%   
+  distinct() %>%    
+  left_join(mc3_nodes_topic5,             
+            unmatched = "drop") 
+
+
+mc3_edges_topic10 <- mc3_edges[mc3_edges$source %in% mc3_nodes_topic10$id,] %>%   
+  filter(type == "Beneficial Owner")  
+id1 <- mc3_edges_topic10 %>%   
+  select(source) %>%   
+  rename(id = source) 
+id2 <- mc3_edges_topic10 %>%    
+  select(target) %>%    
+  rename(id = target)  
+mc3_nodes_topic10 <- rbind(id1, id2) %>%   
+  distinct() %>%    
+  left_join(mc3_nodes_topic10,             
             unmatched = "drop") 
 ```
 
 ```{r}
-mc3_graph <- tbl_graph(nodes = mc3_nodes_fish,                        
-                      edges = mc3_edges_fish,                        
-                        directed = FALSE)  
+mc3_graph_topic5 <- tbl_graph(nodes = mc3_nodes_topic5,                                               edges = mc3_edges_topic5,                                                 directed = FALSE)    
+mc3_graph_topic5 <-mc3_graph_topic5 %>%   
+  mutate(betweenness=centrality_betweenness())  
 
-mc3_graph<-mc3_graph%>%
-  mutate(betweenness=centrality_betweenness())
-
-mc3_graph
+mc3_graph_topic10 <- tbl_graph(nodes = mc3_nodes_topic10,                                               edges = mc3_edges_topic10,                                                 directed = FALSE)    
+mc3_graph_topic10 <-mc3_graph_topic10 %>%   
+  mutate(betweenness=centrality_betweenness())  
 ```
 
-Using the distribution function to understand the centrality_betweenness().
+Using the distribution function to understand the centrality_betweenness() for topic 5 and 10 graphs.
 
 ```{r}
-ggplot(as.data.frame(mc3_graph),aes(x=betweenness))+
+ggplot(as.data.frame(mc3_graph_topic5),aes(x=betweenness))+
   geom_histogram(bins=10,fill="lightblue",colour="black")+
-  ggtitle("Distribution of centrality betweenness")+
+  ggtitle("Distribution of centrality betweenness for topic 5")+
+  theme(plot.title = element_text(hjust=0.5))
+
+ggplot(as.data.frame(mc3_graph_topic10),aes(x=betweenness))+
+  geom_histogram(bins=10,fill="lightblue",colour="black")+
+  ggtitle("Distribution of centrality betweenness for topic 10")+
   theme(plot.title = element_text(hjust=0.5))
 ```
 
-Looking at this, we can filter our records where the centrality between is greater than 50 to understand the interactions.
+Looking at this, we can filter our records where the centrality between is greater than 20 to understand the interactions.
 
 ```{r}
 set.seed (1234)
-degrees <- degree(mc3_graph)
-V(mc3_graph)$degree <- degrees
+degrees <- degree(mc3_graph_topic5)
+V(mc3_graph_topic5)$degree <- degrees
 
-mc3_graph %>%
-  filter(betweenness >= 50) %>%
+mc3_graph_topic5 %>%
+  filter(betweenness >= 75) %>%
 ggraph(layout = "fr") +
   geom_edge_link(aes(alpha=0.5)) +
   geom_node_point(aes(
@@ -344,46 +453,24 @@ ggraph(layout = "fr") +
     colors = "lightblue",
     alpha = 0.5)) +
   scale_size_continuous(range=c(1,10))+
-  geom_node_text(aes(label = id, filter= betweenness >=50 & degree >0), repel = TRUE)+
+  geom_node_text(aes(label = id, filter= betweenness >=200 &degree >0), repel = TRUE)+
   theme_graph()
 ```
 
 ```{r}
-list_top_30 <- Noofowners %>%
-  arrange(desc(count)) %>%
-  top_n(30, wt = count) 
+set.seed (1234)
+degrees <- degree(mc3_graph_topic10)
+V(mc3_graph_topic10)$degree <- degrees
 
-ggplot(data = list_top_30, 
-       aes(x = reorder(source, -count), y = count)) +
-  geom_bar(stat = "identity") +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
-```
-
-# Topic Modelling
-
-```{r}
-corpus <- Corpus(VectorSource(stopwords_removed$word))
-
-# Convert the corpus to a document-term matrix
-dtm <- DocumentTermMatrix(corpus)
-
-# Convert the document-term matrix to a tidy format
-tidy_dtm <- tidy(dtm)
-tidy_dtm
-
-# vocabulary <- tidy_dtm %>%
-#   filter(count > 1)
-# 
-# str(tidy_dtm)
-# head(tidy_dtm)
-# 
-# # Create the LDA model
-# lda_model <- LDA(tidy_dtm, k = 5, control = list(seed = 1234)) 
-
-```
-
-```{r}
-# topics <- tidy(lda_model, matrix = "beta")
-# 
-# topics
+mc3_graph_topic10 %>%
+  filter(betweenness >= 75) %>%
+ggraph(layout = "fr") +
+  geom_edge_link(aes(alpha=0.5)) +
+  geom_node_point(aes(
+    size = betweenness,
+    colors = "lightblue",
+    alpha = 0.5)) +
+  scale_size_continuous(range=c(1,10))+
+  geom_node_text(aes(label = id, filter= betweenness >=200 &degree >0), repel = TRUE)+
+  theme_graph()
 ```
