@@ -22,7 +22,7 @@ Using the data provide by the VAST challenge, we are looking into the [Mini-Cha
 ## Load Packages
 
 ```{r}
-pacman::p_load(jsonlite, tidygraph, ggraph, visNetwork, graphlayouts, ggforce,skimr,tidytext, tidyverse,igraph, topicmodels,tm, stringr, ldatuning)
+pacman::p_load(jsonlite, tidygraph, ggraph, visNetwork, graphlayouts, ggforce,skimr,tidytext, tidyverse,igraph, topicmodels,tm, stringr, ldatuning, ggiraph, plotly)
 ```
 
 ## Data Import
@@ -55,13 +55,22 @@ mc3_edges <- as_tibble(mc3_data$links)%>%
 
 ```{r}
 mc3_nodes <- as_tibble(mc3_data$nodes) %>%
-#  distinct()%>%
   mutate(country = as.character(country),
          id = as.character(id),
          product_services = as.character(product_services),
          revenue_omu = as.numeric(as.character(revenue_omu)),
          type = as.character(type)) %>%
-    select(id, country, type, revenue_omu, product_services)
+    select(id, country, type, revenue_omu, product_services)%>%
+  distinct()%>%
+  mutate(revenue_omu = round(revenue_omu,0)) 
+```
+
+```{r}
+write_rds(mc3_nodes, "data/mc3_nodes.rds")
+mc3_nodes <- read_rds("data/mc3_nodes.rds")
+
+write_rds(mc3_edges, "data/mc3_edges.rds")
+mc3_edges <- read_rds("data/mc3_edges.rds")
 ```
 
 # Initial Data Exploration
@@ -100,7 +109,151 @@ Noofcompanies <- mc3_edges %>%
   group_by(target)%>%
   summarise(count=sum(count))
 
-psych::describe(Noofcompanies)
+Noofcompanies1 <- combined %>%
+  group_by(target)%>%
+  summarise(revenue = sum(revenue_omu))
+
+Noofcompanies <- inner_join(Noofcompanies,Noofcompanies1,
+                  by=c("target"="target"))
+
+Noofcompanies_filtered <- Noofcompanies %>%
+  filter(count >= 5) %>%
+  cross_join(mc3_nodes)
+
+Filtered_mc3_edges <- mc3_edges[mc3_edges$source %in% Noofcompanies_filtered$id,]
+
+```
+
+```{r}
+d <- highlight_key(Noofcompanies) 
+p <- ggplot(d, 
+            aes(count, 
+                revenue)) + 
+  geom_point(size=1) +
+  coord_cartesian()
+
+gg <- highlight(ggplotly(p),        
+                "plotly_selected")  
+
+crosstalk::bscols(gg,               
+                  DT::datatable(d))   
+
+```
+
+```{r}
+id1 <- mc3_edges %>%
+  select(source) %>%
+  mutate(type = "Company")%>%
+  rename(id = source)
+id2 <- mc3_edges %>%
+  select(target,type) %>%
+  rename(id = target)
+mc3_nodes1 <- rbind(id1, id2) %>%
+  distinct() %>%
+  left_join(mc3_nodes,
+            unmatched = "drop")
+
+mc3_graph <- tbl_graph(nodes = mc3_nodes1,
+                       edges = mc3_edges,
+                       directed = FALSE)
+
+mc3_graph <- mc3_graph %>% 
+  activate(nodes) %>%
+  mutate(group_id = components(mc3_graph)$membership)
+
+mc3_graph
+
+
+```
+
+```{r}
+createNE_by_Group <- function(groupid) {
+
+relevant_entities <- mc3_graph %>%
+    activate(nodes) %>%
+    as.tibble()%>%
+    arrange(id) %>%
+    filter(group_id %in% groupid)
+
+
+  relevant_edges <- mc3_edges %>%
+    filter(source %in% relevant_entities$id| target %in% relevant_entities$id) %>%
+    rename(from = source) %>% 
+    rename(to = target) %>% 
+    mutate(title = type)
+
+  # extract the seafood_nodes records using the edge information
+  Cid1 <- relevant_edges %>%
+    select(from) %>%
+    rename(id = from)
+  
+  Cid2 <- relevant_edges %>%
+    select(to) %>%
+    rename(id = to)
+
+  # Get unique nodes from source and target columns of edge records
+  # left join with the mc3_nodes_cleaned3 dataset to get the attributes for the nodes
+  relevant_nodes <- rbind(Cid1, Cid2) %>%
+    left_join(mc3_nodes1,by=c('id')) %>%
+    distinct(id, .keep_all = TRUE)%>%
+    arrange(id) %>%
+    mutate(label = id) %>%
+    mutate(group = type)
+  
+  title = paste("Subsidiary Group ID",groupid)
+  
+  list(relevant_edges = relevant_edges, relevant_nodes = relevant_nodes, title = title)
+   
+}
+
+```
+
+```{r}
+createNE_by_id <- function(entityid) {
+  
+  # obtain the subgraph group id of the entity
+  groupid <- mc3_graph %>% 
+  activate(nodes) %>%
+  filter(id == entityid) %>%
+    select(group_id) %>%
+    as.tibble()
+  
+  # assign the group id to a variable
+  groupid <- groupid$group_id[]
+  
+  # pass the group id into the createNE_by_Group() function to generate the subgraph
+  output <- createNE_by_Group(groupid)
+  
+  # return the nodes and edges data frames for graphing
+  list(relevant_edges = output$relevant_edges,relevant_nodes = output$relevant_nodes,title = entityid)
+   
+}
+```
+
+```{r}
+createGraph <- function(r_nodes , r_edges,title) {
+  
+  visNetwork(nodes = r_nodes,   # Visualize the nodes
+             edges = r_edges,   # Visualize the edges
+             main = paste("Network graph of", title),
+             height = "500px", width = "100%") %>%
+    visIgraphLayout(layout = "layout_nicely") %>%
+    visEdges(smooth = list(enables = TRUE, type = 'straightCross'),  # Customize the appearance of edges
+             shadow = FALSE,
+             dash = FALSE) %>%
+    visOptions(highlightNearest = list(enabled = TRUE, degree = 1, hover = TRUE),  # Enable highlighting of nearest nodes on hover
+               nodesIdSelection = TRUE,
+               selectedBy = "group") %>%  # Enable node selection by group
+    visInteraction(hideEdgesOnDrag = TRUE) %>%  # Hide edges while dragging nodes
+    visLegend() %>%  # Display legend
+    visLayout(randomSeed = 123)  # Set a random seed for consistent layout
+}
+```
+
+```{r}
+result<-createNE_by_id("Michael Johnson")
+
+createGraph(result$relevant_nodes,result$relevant_edges,result$title)
 ```
 
 Below code chunk summarizes the numbers of owners to the company.
@@ -164,6 +317,9 @@ We combined the nodes and edges data so we can find out more on the owner-compan
 ```{r}
 combined <- left_join(mc3_nodes,mc3_edges,
                   by=c("id"="source"))
+
+combined$revenue_omu[is.na(combined$revenue_omu)] <- 0
+
 ```
 
 Below code chunk to find out more on which owners have high number of companies also generating a lot of revenue.

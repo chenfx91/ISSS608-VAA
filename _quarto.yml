@@ -14,17 +14,6 @@ website:
           - Take-home_Ex/Take-home_Ex01/Take-home_Ex01.qmd
           - Take-home_Ex/Take-home_Ex02/Take-home_Ex02.qmd
           - Take-home_Ex/Take-home_Ex03/Take-home_Ex03.qmd
-      - section: "In-Class Exercise"
-        contents: 
-          - In-class_Ex/In-class_Ex03/In-class_Ex03.qmd
-          - In-class_Ex/In-class_Ex04/In-class_Ex04.qmd
-          - In-class_Ex/In-class_Ex05/In-class_Ex05.qmd
-          - In-class_Ex/In-class_Ex07/In-class_Ex07.qmd
-      - section: "Hands-on Exercise"
-        contents: 
-          - Hands-on_Ex/Hands-on_Ex01/Hands-on_Ex01.qmd
-          - Hands-on_Ex/Hands-on_Ex02/Hands-on_Ex02.qmd
-          - Hands-on_Ex/Hands-on_Ex03/Hands-on_Ex03.qmd
       
   
 format:
