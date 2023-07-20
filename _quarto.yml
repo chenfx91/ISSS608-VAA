@@ -14,7 +14,7 @@ website:
           - Take-home_Ex/Take-home_Ex01/Take-home_Ex01.qmd
           - Take-home_Ex/Take-home_Ex02/Take-home_Ex02.qmd
           - Take-home_Ex/Take-home_Ex03/Take-home_Ex03.qmd
-  
+          
 format:
   html:
     theme: 
